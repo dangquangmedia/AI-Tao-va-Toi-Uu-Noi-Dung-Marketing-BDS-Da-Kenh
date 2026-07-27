@@ -3,8 +3,8 @@
 > **File bắt đầu duy nhất cho phiên làm việc mới.** Khi mở lại dự án, hãy đọc file này trước. Chỉ mở các tài liệu hoặc mã nguồn được dẫn ở đây khi nhiệm vụ hiện tại thực sự cần chi tiết hơn.
 
 **Dự án:** AI tạo và tối ưu nội dung marketing BĐS đa kênh
-**Cập nhật gần nhất:** 27/07/2026
-**Trạng thái tổng thể:** đã tổng hợp lại toàn bộ kế hoạch thành bộ 4 file mới trong `Plan/` (bám dữ liệu DataBDS thật, bỏ Microsoft GraphRAG R4, lịch 8 tuần tương đối); đã có dữ liệu crawler thật; **chưa có mã nguồn ứng dụng**.
+**Cập nhật gần nhất:** 27/07/2026 (tối)
+**Trạng thái tổng thể:** Tuần 1 gần hoàn tất trên branch `tuan-01-nen-tang` — monorepo backend/frontend chạy local end-to-end, 13/13 tests pass, 200 tin DataBDS đã vào raw zone idempotent; còn thiếu duy nhất staging URL (chờ tài khoản cloud).
 
 ---
 
@@ -48,13 +48,15 @@
 - **Lê Văn Quang:** hệ thống + tích hợp — backend/frontend, database, auth/RBAC/tenant, graph storage/traversal, hybrid retrieval, CI/CD, dashboard, deployment.
 - **Phạm Vũ Hải:** dữ liệu + mô hình — crawler/contract, làm sạch, SFT dataset, QLoRA, evaluation, vision data.
 
-## 5. Việc cần làm tiếp theo (Tuần 1 theo lịch mới)
+## 5. Việc cần làm tiếp theo (đầu Tuần 2)
 
-1. Khởi tạo monorepo FastAPI + Next.js, PostgreSQL + pgvector migrations, auth/RBAC, project CRUD, staging URL.
-2. Adapter đọc DataBDS → raw zone; import ≥100 tin không sửa tay.
-3. Hải audit chất lượng DataBDS, khóa `crawler_contract_v1`, viết spec re-parse D1.
-4. Gate cuối Tuần 1: đăng nhập trên staging + import chạy được + tạo/xem project.
-5. Sau mỗi buổi: cập nhật file log này bằng bằng chứng thật (file/test/URL/commit), không đánh dấu hoàn thành theo kế hoạch.
+1. **Quang chọn nền tảng cloud + cấp tài khoản** → deploy staging (carry-over duy nhất của Tuần 1).
+2. Import toàn bộ 4.795 tin (hiện 200 tin demo): `python -m app.ingest_cli` không limit.
+3. Hải bắt đầu re-parse D1 (giá/project/pháp lý từ title+description+URL) theo `Plan/02` §4; khóa `crawler_contract_v1.json`.
+4. Tuần 2 theo `Plan/01` §6: canonical facts + provenance + graph entities/edges deterministic.
+5. Sau mỗi buổi: cập nhật file log này bằng bằng chứng thật (file/test/URL/commit).
+
+Chi tiết Tuần 1 + cách chạy local: `docs/checkpoints/week_01_report.md`.
 
 ## 6. Nguyên tắc giữ phạm vi
 
