@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(git add -A)",
+      "PowerShell(git reset HEAD .claude/settings.json 2>$null)",
+      "PowerShell(git push origin main)",
+      "PowerShell(node --version 2>$null)",
+      "PowerShell(npm --version 2>$null)",
+      "PowerShell(docker --version 2>$null)",
+      "PowerShell(psql --version 2>$null)",
+      "PowerShell(Start-Process \"C:\\\\Program Files\\\\Docker\\\\Docker\\\\Docker Desktop.exe\" -ErrorAction SilentlyContinue)",
+      "PowerShell(git checkout -b tuan-01-nen-tang)",
+      "PowerShell(Set-Location d:\\\\AI_UIT\\\\DO_AN_TN; docker compose up -d 2>&1 | Select-Object -Last 3; $tries=0; do { Start-Sleep -Seconds 2; $h = docker inspect --format \"{{.State.Health.Status}}\" cancu-db 2>$null; $tries++ } while \\($h -ne \"healthy\" -and $tries -lt 20\\); Write-Output \"db health: $h\")",
+      "PowerShell(Set-Location d:\\\\AI_UIT\\\\DO_AN_TN\\\\backend; Start-Process -WindowStyle Hidden -FilePath \".\\\\.venv\\\\Scripts\\\\python.exe\" -ArgumentList \"-m\",\"uvicorn\",\"app.main:app\",\"--port\",\"8000\" -WorkingDirectory \\(Get-Location\\); Set-Location ..\\\\frontend; Start-Process -WindowStyle Hidden -FilePath \"cmd.exe\" -ArgumentList \"/c\",\"npm run dev > .next-dev.log 2>&1\" -WorkingDirectory \\(Get-Location\\); Start-Sleep -Seconds 12; \\(Invoke-WebRequest -UseBasicParsing http://localhost:8000/api/health\\).Content; \\(Invoke-WebRequest -UseBasicParsing http://localhost:3000/\\).StatusCode)",
+      "PowerShell(Get-NetTCPConnection -LocalPort 8000 -State Listen | ForEach-Object { $p = Get-Process -Id $_.OwningProcess; \"{0} pid={1} name={2}\" -f $_.LocalAddress, $p.Id, $p.ProcessName }; \\(Invoke-WebRequest -UseBasicParsing http://localhost:8000/api/health\\).Content)",
+      "PowerShell(netstat -ano | Select-String \":8000\" | Select-Object -First 6; Get-Process python -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, StartTime | Select-Object -First 5; \\(Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8000/api/health -ErrorAction SilentlyContinue\\).Content)",
+      "PowerShell(Get-Process -Id 8384)",
+      "PowerShell(Set-Location d:\\\\AI_UIT\\\\DO_AN_TN\\\\backend; Start-Process -WindowStyle Hidden -FilePath \".\\\\.venv\\\\Scripts\\\\python.exe\" -ArgumentList \"-m\",\"uvicorn\",\"app.main:app\",\"--host\",\"127.0.0.1\",\"--port\",\"8001\" -WorkingDirectory \\(Get-Location\\); Start-Sleep -Seconds 4; \\(Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8001/api/health\\).Content; Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force -Confirm:$false; Set-Location ..\\\\frontend; Start-Process -WindowStyle Hidden -FilePath \"cmd.exe\" -ArgumentList \"/c\",\"npm run dev > .next-dev.log 2>&1\" -WorkingDirectory \\(Get-Location\\); Start-Sleep -Seconds 10; \\(Invoke-WebRequest -UseBasicParsing http://localhost:3000/\\).StatusCode)"
+    ]
+  }
+}

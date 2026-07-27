@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+.next/
+out/
+
+# Env & secrets
+.env
+*.env.local
+
+# IDE / OS
+.vs/
+.idea/
+Thumbs.db
+
+# Playwright artifacts
+.playwright-mcp/
+
+# Ảnh crawl dung lượng lớn (giữ ngoài git)
+DataBDS/data/

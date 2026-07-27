@@ -1,0 +1,18 @@
+
+> cancu-frontend@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.22
+   - Local:        http://localhost:3000
+   - Network:      http://172.28.48.1:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 4s
+ ○ Compiling / ...
+ ✓ Compiled / in 5.7s (549 modules)
+ GET / 200 in 6554ms
+ GET / 200 in 143ms
+ ○ Compiling /projects ...
+ ✓ Compiled /projects in 737ms (542 modules)
+ GET /projects 200 in 1023ms

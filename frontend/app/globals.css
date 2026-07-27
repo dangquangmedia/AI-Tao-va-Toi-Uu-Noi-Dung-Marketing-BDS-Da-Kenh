@@ -1,0 +1,58 @@
+:root {
+  --ink: #14232b;
+  --muted: #5b6b76;
+  --line: #d8dee4;
+  --paper: #ffffff;
+  --paper-2: #f6f8f9;
+  --brand: #0b6b53;
+  --brand-deep: #08453a;
+  --brand-soft: #e3f0eb;
+  --danger: #b91c1c;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  background: var(--paper-2);
+  color: var(--ink);
+  line-height: 1.5;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 24px; }
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px;
+}
+.logotype { font-family: Cambria, Georgia, serif; font-weight: 700; }
+.logotype .tick { color: var(--brand); }
+h1 { font-family: Cambria, Georgia, serif; font-size: 26px; margin-bottom: 12px; }
+label { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 12px 0 4px; }
+input, textarea {
+  width: 100%;
+  border: 1.5px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+button {
+  margin-top: 16px;
+  background: var(--brand);
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+button:hover { background: var(--brand-deep); }
+button.secondary { background: var(--paper); color: var(--ink); border: 1.5px solid var(--line); }
+.error { color: var(--danger); font-size: 13px; margin-top: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin-top: 16px; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); border-bottom: 2px solid var(--ink); padding: 8px; }
+td { padding: 10px 8px; border-bottom: 1px solid var(--line); }
+.topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+.stats { display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; }
+.stat { background: var(--brand-soft); color: var(--brand-deep); border-radius: 10px; padding: 10px 18px; font-size: 13px; }
+.stat b { font-size: 20px; display: block; font-family: Cambria, Georgia, serif; }
