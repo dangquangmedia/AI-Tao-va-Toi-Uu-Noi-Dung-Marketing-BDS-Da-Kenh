@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import TopBar from "@/components/TopBar";
 import { api } from "@/lib/api";
 
 type Project = {
@@ -55,26 +56,11 @@ export default function ProjectsPage() {
     }
   }
 
-  function logout() {
-    localStorage.removeItem("cancu_token");
-    router.push("/");
-  }
-
   const canCreate = me?.role === "admin" || me?.role === "marketer";
 
   return (
     <main className="container">
-      <div className="topbar">
-        <div className="logotype" style={{ fontSize: 24 }}>
-          Căn<span className="tick"> Cứ</span>
-        </div>
-        <div style={{ fontSize: 13, color: "var(--muted)" }}>
-          {me ? `${me.email} · ${me.role}` : "…"}{" "}
-          <button className="secondary" style={{ marginTop: 0, marginLeft: 8 }} onClick={logout}>
-            Đăng xuất
-          </button>
-        </div>
-      </div>
+      <TopBar me={me} />
 
       {stats && (
         <div className="stats">

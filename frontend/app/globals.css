@@ -56,3 +56,33 @@ td { padding: 10px 8px; border-bottom: 1px solid var(--line); }
 .stats { display: flex; gap: 16px; margin: 16px 0; flex-wrap: wrap; }
 .stat { background: var(--brand-soft); color: var(--brand-deep); border-radius: 10px; padding: 10px 18px; font-size: 13px; }
 .stat b { font-size: 20px; display: block; font-family: Cambria, Georgia, serif; }
+.nav { display: flex; gap: 4px; }
+.nav-link {
+  font-size: 14px; font-weight: 600; color: var(--muted); text-decoration: none;
+  padding: 6px 12px; border-radius: 8px;
+}
+.nav-link:hover { background: var(--brand-soft); color: var(--brand-deep); }
+.nav-link.active { background: var(--brand-soft); color: var(--brand-deep); }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.card + .card { margin-top: 16px; }
+h2 { font-family: Cambria, Georgia, serif; font-size: 19px; margin: 0 0 4px; }
+.hint { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+.metric { background: var(--paper-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.metric b { display: block; font-family: Cambria, Georgia, serif; font-size: 22px; }
+.metric span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+.bar { height: 6px; background: var(--brand-soft); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--brand); }
+.chip {
+  display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px;
+  background: var(--brand-soft); color: var(--brand-deep); margin: 2px 4px 2px 0;
+}
+.chip.warn { background: #fdf0dd; color: #8a4b06; }
+.chip.mute { background: var(--paper-2); color: var(--muted); border: 1px solid var(--line); }
+.path { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 14px; }
+.path .node { background: var(--paper-2); border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; }
+.path .node.project { background: var(--brand-soft); border-color: var(--brand); font-weight: 700; }
+.path .edge { font-size: 11px; color: var(--muted); letter-spacing: .5px; }
+.src { font-size: 12px; color: var(--muted); word-break: break-all; }
+.src a { color: var(--brand); }
+.row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+select { border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: inherit; }

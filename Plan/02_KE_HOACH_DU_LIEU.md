@@ -52,6 +52,8 @@ URL batdongsan.com.vn chứa slug dự án (ví dụ `...vinhomes-ocean-park-gia
 
 Đây là **xương sống của Property Knowledge Graph và của việc chia split theo project**.
 
+> **Cập nhật sau khi cài đặt D1 (Tuần 2):** con số 816/1.919 ở trên đến từ regex thăm dò lỏng, có lẫn tên phường bị hiểu nhầm thành dự án. Luật chính thức trong `backend/app/services/reparse.py` siết lại (chỉ nhận phần sau mã vùng dạng số) nên cho **347 dự án / 862 tin** — ít hơn nhưng không tạo entity giả. Nâng độ phủ bằng alias/dictionary ở Tuần 3. Số liệu đo thật: [docs/checkpoints/week_02_data_quality.md](../docs/checkpoints/week_02_data_quality.md).
+
 ## 2. Nguyên tắc phân tầng dữ liệu (4 tầng)
 
 | Tầng | Nội dung | Nguồn |
