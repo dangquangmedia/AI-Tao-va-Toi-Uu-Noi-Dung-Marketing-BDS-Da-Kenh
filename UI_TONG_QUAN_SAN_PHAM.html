@@ -1,41 +1,439 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>EstateAI — Product Vision</title>
-  <style>
-    :root{--ink:#142a26;--muted:#697a76;--green:#176f62;--green2:#0d4b43;--mint:#e8f4f1;--line:#dfe8e5;--bg:#f3f6f5;--white:#fff;--amber:#b56c19;--red:#b94242;--purple:#5d67a6;--shadow:0 12px 35px rgba(24,51,46,.09)}
-    *{box-sizing:border-box}body{margin:0;font-family:Inter,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--ink)}button,input,select,textarea{font:inherit}button{cursor:pointer}.app{display:grid;grid-template-columns:240px 1fr;min-height:100vh}.sidebar{background:#103b35;color:#dceeea;padding:25px 18px;position:fixed;width:240px;height:100vh}.brand{display:flex;align-items:center;gap:11px;font-size:19px;font-weight:800;margin:3px 7px 31px}.logo{width:35px;height:35px;border-radius:11px;background:#ecb86c;color:#103b35;display:grid;place-items:center;font-weight:900}.nav-label{font-size:10px;letter-spacing:1.6px;color:#82aaa2;margin:21px 10px 8px}.nav{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:10px;margin:3px 0;color:#cfe3df;font-size:13px;cursor:pointer}.nav:hover,.nav.active{background:#1c5149;color:#fff}.nav span:first-child{width:19px;text-align:center}.user{position:absolute;left:18px;right:18px;bottom:20px;padding:13px;background:#194a43;border-radius:13px;display:flex;gap:10px;align-items:center}.avatar{width:35px;height:35px;border-radius:50%;background:#f0c382;color:#153c36;display:grid;place-items:center;font-weight:800}.user b{font-size:12px}.user small{display:block;color:#9fc1ba;margin-top:3px}.main{grid-column:2;padding:0 30px 45px}.topbar{height:76px;display:flex;align-items:center;justify-content:space-between}.crumb{font-size:13px;color:var(--muted)}.crumb b{color:var(--ink)}.top-actions{display:flex;gap:9px}.btn{border:1px solid var(--line);background:#fff;color:var(--ink);padding:10px 14px;border-radius:10px;font-size:12px;font-weight:700}.btn.primary{background:var(--green);color:#fff;border-color:var(--green)}.btn.ghost{background:transparent}.page{display:none}.page.active{display:block}.hero{background:linear-gradient(125deg,#123f38,#1f6e62);border-radius:20px;color:#fff;padding:28px 31px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow)}.eyebrow{font-size:10px;letter-spacing:1.8px;font-weight:800;color:#8dd2c5}.hero h1{font-size:29px;margin:9px 0 8px}.hero p{margin:0;color:#c8e1dc;font-size:13px;max-width:650px;line-height:1.6}.hero-score{display:flex;gap:13px}.score{padding:14px 18px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);border-radius:14px;min-width:110px}.score b{font-size:21px;display:block}.score small{color:#a8cdc6}.grid{display:grid;gap:16px}.stats{grid-template-columns:repeat(4,1fr);margin:18px 0}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:19px;box-shadow:0 5px 18px rgba(24,51,46,.035)}.metric-head{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}.metric strong{font-size:27px;margin:12px 0 7px;display:block}.delta{font-size:10px;color:var(--green);background:var(--mint);padding:4px 7px;border-radius:10px}.two{grid-template-columns:1.35fr .65fr}.card h3{font-size:14px;margin:0 0 15px}.project{display:grid;grid-template-columns:50px 1fr auto;gap:12px;align-items:center;padding:13px 0;border-bottom:1px solid #edf1ef}.project:last-child{border:0}.thumb{width:50px;height:50px;border-radius:12px;background:linear-gradient(145deg,#87a7a0,#d9c59f);display:grid;place-items:center;color:#fff}.project b{font-size:13px}.project p{font-size:11px;color:var(--muted);margin:5px 0 0}.pill{font-size:10px;font-weight:800;padding:5px 8px;border-radius:20px;background:var(--mint);color:var(--green)}.pipeline{display:flex;align-items:center;gap:7px;margin:13px 0}.step{flex:1;background:#f5f8f7;padding:10px;border-radius:10px;text-align:center;font-size:10px;color:var(--muted)}.step.done{background:var(--mint);color:var(--green);font-weight:700}.arrow{color:#9bacaa}.bars{display:flex;align-items:flex-end;gap:8px;height:105px;padding-top:10px}.bar{flex:1;background:#cce5df;border-radius:6px 6px 2px 2px;position:relative}.bar:last-child{background:var(--green)}.bar span{position:absolute;bottom:-19px;width:100%;font-size:9px;text-align:center;color:var(--muted)}
-    .section-title{display:flex;justify-content:space-between;align-items:end;margin:5px 0 17px}.section-title h1{font-size:25px;margin:0}.section-title p{font-size:12px;color:var(--muted);margin:7px 0 0}.studio{grid-template-columns:280px 1fr 330px}.field{margin-bottom:14px}.field label{display:block;font-size:10px;font-weight:800;color:#536762;margin-bottom:7px;letter-spacing:.4px}.field select,.field input,.field textarea{width:100%;border:1px solid var(--line);background:#fbfcfc;border-radius:9px;padding:10px;font-size:12px;color:var(--ink)}.field textarea{resize:none;min-height:70px}.channel-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.channel{padding:9px;border:1px solid var(--line);border-radius:9px;font-size:10px;text-align:center}.channel.selected{border-color:var(--green);background:var(--mint);color:var(--green);font-weight:800}.editor-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:14px;border-bottom:1px solid var(--line)}.editor-head span{font-size:11px;color:var(--muted)}.content-preview{padding:23px 8px;line-height:1.75;font-size:13px}.content-preview h2{font-size:21px;line-height:1.35}.highlight{background:#fff1c9;border-bottom:2px solid #dfab40}.evidence{padding:11px 0;border-bottom:1px solid var(--line)}.evidence:last-child{border:0}.evidence-top{display:flex;justify-content:space-between;align-items:center}.evidence b{font-size:11px}.evidence p{font-size:10px;color:var(--muted);line-height:1.5}.confidence{font-size:9px;color:var(--green)}.path{font-size:9px;background:#f3f7f6;padding:7px;border-radius:7px;color:#4e6660}.warn{color:var(--amber)!important}.tabs{display:flex;gap:6px;margin-bottom:16px}.tab{padding:9px 12px;background:#fff;border:1px solid var(--line);border-radius:9px;font-size:11px}.tab.active{background:var(--green);color:#fff}.knowledge{grid-template-columns:1fr 360px}.graph{height:430px;background:radial-gradient(circle at center,#fff,#f3f7f6);border:1px solid var(--line);border-radius:16px;position:relative;overflow:hidden}.node{position:absolute;padding:8px 11px;border-radius:20px;background:#fff;border:2px solid #90c9be;box-shadow:0 5px 14px rgba(30,75,67,.1);font-size:10px;font-weight:700;z-index:2}.node.project-node{background:var(--green);color:#fff;border-color:var(--green)}.node.amenity{border-color:#e5b368}.edge{position:absolute;height:2px;background:#bdceca;transform-origin:left center;z-index:1}.legend{display:flex;gap:15px;font-size:10px;color:var(--muted);margin:11px}.dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px}.table{width:100%;border-collapse:collapse}.table th{text-align:left;font-size:9px;color:var(--muted);padding:10px;border-bottom:1px solid var(--line)}.table td{font-size:11px;padding:12px 10px;border-bottom:1px solid #edf1ef}.experiment{grid-template-columns:1.3fr .7fr}.config{display:grid;grid-template-columns:45px 1fr 90px 90px;gap:9px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);font-size:11px}.config strong{width:31px;height:31px;border-radius:9px;background:var(--mint);color:var(--green);display:grid;place-items:center}.quality{height:7px;background:#edf1ef;border-radius:10px;overflow:hidden}.quality i{display:block;height:100%;background:var(--green)}.mini-note{font-size:11px;color:var(--muted);line-height:1.55}.footer-note{text-align:center;margin-top:28px;font-size:10px;color:#879591}@media(max-width:1100px){.app{grid-template-columns:75px 1fr}.sidebar{width:75px}.brand span,.nav span:last-child,.nav-label,.user div:last-child{display:none}.main{grid-column:2;padding:0 18px}.sidebar{padding:22px 10px}.user{left:12px;right:12px}.stats{grid-template-columns:1fr 1fr}.studio,.knowledge,.experiment{grid-template-columns:1fr}.hero-score{display:none}}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Căn Cứ — UI tổng quan sản phẩm · ĐATN UIT 2026</title>
+<style>
+  :root{
+    --bg:#EDEFF2; --ink:#14232B; --muted:#5B6B76; --line:#D8DEE4;
+    --paper:#FFFFFF; --paper-2:#F6F8F9;
+    --brand:#0B6B53; --brand-deep:#08453A; --brand-soft:#E3F0EB;
+    --amber:#B45309; --amber-bg:#FDF2E3; --amber-line:#EBCB9F;
+    --danger:#B91C1C; --danger-bg:#FDECEC;
+    --radius:12px;
+    --sans:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+    --serif:Cambria,"Times New Roman","Segoe UI",serif;
+    --mono:Consolas,"Courier New",monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.5}
+  a{color:inherit}
+
+  /* ===== Khung trình bày ===== */
+  .deck{max-width:1180px;margin:0 auto;padding:48px 24px 80px}
+  .masthead{display:flex;flex-wrap:wrap;align-items:flex-end;gap:24px;justify-content:space-between;border-bottom:3px solid var(--ink);padding-bottom:22px}
+  .logotype{font-family:var(--serif);font-size:56px;font-weight:700;letter-spacing:-1px;line-height:1}
+  .logotype .tick{color:var(--brand)}
+  .logotype-note{font-family:var(--serif);font-style:italic;font-size:15px;color:var(--muted);margin-top:8px}
+  .masthead-meta{text-align:right;font-size:13px;color:var(--muted)}
+  .masthead-meta b{color:var(--ink)}
+  .screen-nav{position:sticky;top:0;z-index:50;background:var(--bg);display:flex;gap:8px;flex-wrap:wrap;padding:14px 0;border-bottom:1px solid var(--line)}
+  .screen-nav a{text-decoration:none;font-size:13px;font-weight:600;padding:7px 14px;border:1.5px solid var(--ink);border-radius:999px;background:var(--paper)}
+  .screen-nav a:hover,.screen-nav a:focus-visible{background:var(--ink);color:#fff;outline:none}
+
+  .screen{margin-top:64px}
+  .screen-label{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  .screen-label .no{font-family:var(--mono);font-size:13px;color:var(--brand);font-weight:700;letter-spacing:1px}
+  .screen-label h2{font-family:var(--serif);font-size:30px;font-weight:700}
+  .screen-cap{color:var(--muted);font-size:14.5px;max-width:760px;margin-bottom:18px}
+  .screen-cap b{color:var(--brand-deep)}
+
+  /* ===== Cửa sổ app ===== */
+  .window{background:var(--paper);border:1.5px solid var(--ink);border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(20,35,43,.12)}
+  .chrome{display:flex;align-items:center;gap:10px;background:var(--ink);padding:9px 14px}
+  .dots{display:flex;gap:5px}
+  .dots i{width:9px;height:9px;border-radius:50%;background:#51626d;display:block}
+  .urlbar{flex:1;background:#243541;color:#AFC3CE;font-family:var(--mono);font-size:12px;border-radius:6px;padding:4px 12px;white-space:nowrap;overflow:hidden}
+  .urlbar b{color:#fff;font-weight:600}
+
+  /* ===== App shell chung ===== */
+  .appbar{display:flex;align-items:center;gap:18px;padding:12px 20px;border-bottom:1px solid var(--line);background:var(--paper)}
+  .appbar .mark{font-family:var(--serif);font-weight:700;font-size:18px}
+  .appbar .mark .tick{color:var(--brand)}
+  .appbar nav{display:flex;gap:4px;font-size:13px}
+  .appbar nav span{padding:6px 12px;border-radius:8px;color:var(--muted)}
+  .appbar nav .on{background:var(--brand-soft);color:var(--brand-deep);font-weight:700}
+  .appbar .who{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+  .role{background:var(--ink);color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.4px}
+
+  .chip{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+  .chip.ok{background:var(--brand-soft);color:var(--brand-deep)}
+  .chip.warn{background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-line)}
+  .chip.bad{background:var(--danger-bg);color:var(--danger)}
+  .chip.dim{background:var(--paper-2);color:var(--muted);border:1px solid var(--line)}
+
+  .cite{display:inline-block;vertical-align:super;font-size:10px;font-weight:700;font-family:var(--mono);background:var(--amber-bg);color:var(--amber);border:1px solid var(--amber-line);border-radius:5px;padding:0 5px;margin-left:2px;cursor:default}
+  .cite.bad{background:var(--danger-bg);color:var(--danger);border-color:#EFC0C0}
+
+  .btn{display:inline-block;font-size:13px;font-weight:700;padding:9px 18px;border-radius:9px;border:1.5px solid var(--ink);background:var(--paper);cursor:default}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  .btn.ghost{border-color:var(--line);color:var(--muted);font-weight:600}
+  .btn.danger{border-color:var(--danger);color:var(--danger)}
+
+  h4.paneltitle{font-size:11.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+
+  /* ===== 1. Login ===== */
+  .login-stage{display:grid;grid-template-columns:1.1fr 1fr;min-height:430px}
+  .login-brand{background:var(--brand-deep);color:#EAF3EF;padding:44px;display:flex;flex-direction:column;justify-content:space-between}
+  .login-brand .big{font-family:var(--serif);font-size:40px;line-height:1.15;font-weight:700}
+  .login-brand .big em{color:#FBD9A5;font-style:italic}
+  .login-brand ul{list-style:none;font-size:13.5px;display:grid;gap:9px;color:#BCD6CC}
+  .login-brand ul li::before{content:"— ";color:#FBD9A5}
+  .login-form{padding:44px;display:flex;flex-direction:column;justify-content:center;gap:14px;background:var(--paper)}
+  .login-form h3{font-family:var(--serif);font-size:22px}
+  .field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:5px}
+  .field .input{border:1.5px solid var(--line);border-radius:9px;padding:10px 13px;font-size:14px;color:var(--ink);background:var(--paper-2)}
+  .roles{display:flex;gap:8px;font-size:12px;color:var(--muted);align-items:center;flex-wrap:wrap}
+
+  /* ===== 2. Dashboard ===== */
+  .dash{display:grid;grid-template-columns:230px 1fr;min-height:520px}
+  .side{border-right:1px solid var(--line);background:var(--paper-2);padding:18px 14px;font-size:13px}
+  .side .item{padding:8px 12px;border-radius:8px;color:var(--muted);margin-bottom:2px}
+  .side .item.on{background:var(--brand-soft);color:var(--brand-deep);font-weight:700}
+  .main{padding:22px 24px}
+  .statrow{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:14px 0 22px}
+  .stat{border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;background:var(--paper)}
+  .stat .v{font-family:var(--serif);font-size:28px;font-weight:700}
+  .stat .k{font-size:12px;color:var(--muted)}
+  table.list{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.list th{font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);text-align:left;padding:8px 10px;border-bottom:2px solid var(--ink)}
+  table.list td{padding:11px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+  table.list tr:hover td{background:var(--paper-2)}
+  .meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden;min-width:90px}
+  .meter i{display:block;height:100%;background:var(--brand)}
+
+  /* ===== 3. Studio ===== */
+  .studio{display:grid;grid-template-columns:250px 1fr 320px;min-height:640px}
+  .brief{border-right:1px solid var(--line);background:var(--paper-2);padding:18px;font-size:13px;display:flex;flex-direction:column;gap:16px}
+  .brief .group b{display:block;font-size:11.5px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+  .pills{display:flex;flex-wrap:wrap;gap:6px}
+  .pill{border:1.5px solid var(--line);background:var(--paper);border-radius:999px;padding:5px 12px;font-size:12.5px;color:var(--muted)}
+  .pill.on{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-deep);font-weight:700}
+  .draft{padding:22px 26px;overflow:hidden}
+  .draft-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .draft-card{border:1px solid var(--line);border-radius:var(--radius);padding:20px 22px;background:var(--paper)}
+  .draft-card h3{font-family:var(--serif);font-size:21px;margin-bottom:10px}
+  .draft-card p{font-size:14px;margin-bottom:10px}
+  .draft-card .cta{font-weight:700;color:var(--brand-deep)}
+  .warnbox{margin-top:14px;border:1.5px dashed var(--amber-line);background:var(--amber-bg);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--amber)}
+  .evidence{border-left:1px solid var(--line);background:var(--paper-2);padding:18px;font-size:13px;overflow:hidden}
+  .fact{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:8px;padding:9px 11px;margin-bottom:8px}
+  .fact .fid{font-family:var(--mono);font-size:10.5px;color:var(--amber);font-weight:700}
+  .fact .src{font-size:11px;color:var(--muted);font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .gpath{margin:10px 0 4px;display:flex;flex-direction:column;gap:4px}
+  .gnode{background:var(--paper);border:1.5px solid var(--brand);border-radius:8px;padding:7px 11px;font-size:12.5px;font-weight:700;color:var(--brand-deep)}
+  .gnode small{display:block;font-weight:400;color:var(--muted);font-family:var(--mono);font-size:10.5px}
+  .gedge{color:var(--brand);font-family:var(--mono);font-size:11px;padding-left:16px}
+
+  /* ===== 4. Review ===== */
+  .review{display:grid;grid-template-columns:1fr 300px;min-height:520px}
+  .rv-main{padding:22px 26px}
+  .flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;font-weight:700;margin:12px 0 20px}
+  .flow .st{padding:5px 12px;border-radius:999px;border:1.5px solid var(--line);color:var(--muted)}
+  .flow .st.done{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-deep)}
+  .flow .st.now{border-color:var(--amber);background:var(--amber-bg);color:var(--amber)}
+  .flow .sep{color:var(--line)}
+  .diff{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;font-size:13.5px}
+  .diff .row{padding:10px 16px;border-bottom:1px solid var(--line)}
+  .diff .row:last-child{border-bottom:0}
+  .diff .del{background:var(--danger-bg);text-decoration:line-through;color:var(--danger)}
+  .diff .add{background:var(--brand-soft)}
+  .rv-side{border-left:1px solid var(--line);background:var(--paper-2);padding:18px;font-size:13px}
+  .ver{border-left:3px solid var(--line);padding:2px 0 14px 14px;position:relative}
+  .ver::before{content:"";position:absolute;left:-7px;top:4px;width:11px;height:11px;border-radius:50%;background:var(--paper);border:2.5px solid var(--muted)}
+  .ver.on{border-left-color:var(--brand)}
+  .ver.on::before{border-color:var(--brand);background:var(--brand)}
+  .ver b{font-size:13px}
+  .ver .meta{font-size:11.5px;color:var(--muted);font-family:var(--mono)}
+
+  /* ===== 5. Experiments ===== */
+  .lab{padding:22px 26px;min-height:540px}
+  .lab-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:16px 0 22px}
+  .cfg{border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;background:var(--paper)}
+  .cfg.win{border:2px solid var(--brand);box-shadow:0 6px 18px rgba(11,107,83,.14)}
+  .cfg .id{font-family:var(--serif);font-size:24px;font-weight:700}
+  .cfg .nm{font-size:12px;color:var(--muted);margin-bottom:10px}
+  .bar{display:grid;grid-template-columns:110px 1fr 44px;align-items:center;gap:8px;font-size:12px;margin-bottom:7px}
+  .bar .tr{height:9px;background:var(--line);border-radius:99px;overflow:hidden}
+  .bar .tr i{display:block;height:100%;background:var(--brand)}
+  .bar .tr i.amber{background:var(--amber)}
+  .bar .n{font-family:var(--mono);text-align:right;color:var(--muted)}
+  .footnote{margin-top:56px;border-top:3px solid var(--ink);padding-top:16px;font-size:12.5px;color:var(--muted);display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+
+  @media (max-width:980px){
+    .login-stage,.dash,.studio,.review{grid-template-columns:1fr}
+    .side,.brief{border-right:0;border-bottom:1px solid var(--line)}
+    .evidence,.rv-side{border-left:0;border-top:1px solid var(--line)}
+    .statrow,.lab-grid{grid-template-columns:repeat(2,1fr)}
+    .logotype{font-size:40px}
+  }
+</style>
 </head>
-<body><div class="app">
-  <aside class="sidebar"><div class="brand"><div class="logo">E</div><span>EstateAI</span></div><div class="nav-label">WORKSPACE</div>
-    <div class="nav active" data-page="dashboard"><span>⌂</span><span>Tổng quan</span></div><div class="nav" data-page="projects"><span>▦</span><span>Kho tri thức</span></div><div class="nav" data-page="studio"><span>✦</span><span>Content Studio</span></div><div class="nav" data-page="review"><span>✓</span><span>Kiểm duyệt</span></div><div class="nav-label">NGHIÊN CỨU</div><div class="nav" data-page="experiments"><span>⌁</span><span>Thí nghiệm</span></div><div class="nav"><span>◎</span><span>Quản trị</span></div>
-    <div class="user"><div class="avatar">LQ</div><div><b>Lê Văn Quang</b><small>Administrator</small></div></div>
-  </aside>
-  <main class="main"><header class="topbar"><div class="crumb">Vinhomes Grand Park / <b>Campaign gia đình trẻ</b></div><div class="top-actions"><button class="btn">Thông báo · 3</button><button class="btn primary" data-go="studio">＋ Tạo nội dung</button></div></header>
+<body>
+<div class="deck">
 
-    <section class="page active" id="dashboard"><div class="hero"><div><div class="eyebrow">MARKETING INTELLIGENCE WORKSPACE</div><h1>Nội dung đúng dữ kiện, đúng người, đúng kênh.</h1><p>Biến dữ liệu dự án và hình ảnh thành nội dung đa kênh, kèm đường dẫn bằng chứng từ Property Knowledge Graph và nguồn gốc tài liệu.</p></div><div class="hero-score"><div class="score"><b>94.2%</b><small>Fact precision</small></div><div class="score"><b>1.8s</b><small>Retrieval p95</small></div></div></div>
-      <div class="grid stats"><div class="card metric"><div class="metric-head">NỘI DUNG THÁNG NÀY <span>↗</span></div><strong>248</strong><span class="delta">+18.6%</span></div><div class="card metric"><div class="metric-head">ĐÃ DUYỆT <span>✓</span></div><strong>187</strong><span class="delta">75.4%</span></div><div class="card metric"><div class="metric-head">FACT CÓ NGUỒN <span>⌁</span></div><strong>96%</strong><span class="delta">+4.2%</span></div><div class="card metric"><div class="metric-head">PROJECT ĐANG CHẠY <span>▦</span></div><strong>06</strong><span class="delta">2 mới</span></div></div>
-      <div class="grid two"><div class="card"><h3>Dự án gần đây</h3><div class="project"><div class="thumb">GP</div><div><b>Vinhomes Grand Park</b><p>18 tòa · 42 loại căn · 126 tiện ích</p></div><span class="pill">Sẵn sàng</span></div><div class="project"><div class="thumb" style="background:linear-gradient(145deg,#7e91aa,#c9b690)">OC</div><div><b>Vinhomes Ocean Park</b><p>12 tòa · 31 loại căn · 98 tiện ích</p></div><span class="pill">Đang index</span></div><div class="project"><div class="thumb" style="background:linear-gradient(145deg,#ad8d79,#6f8b7d)">GC</div><div><b>Vinhomes Green City</b><p>8 phân khu · 67 nguồn dữ liệu</p></div><span class="pill">Cần duyệt</span></div></div>
-      <div class="card"><h3>Pipeline hôm nay</h3><div class="pipeline"><div class="step done">Ingest<br><b>100%</b></div><div class="arrow">›</div><div class="step done">Graph<br><b>96%</b></div><div class="arrow">›</div><div class="step">Review<br><b>18</b></div></div><h3 style="margin-top:24px">Sản lượng theo kênh</h3><div class="bars"><div class="bar" style="height:48%"><span>Listing</span></div><div class="bar" style="height:75%"><span>Facebook</span></div><div class="bar" style="height:54%"><span>Email</span></div><div class="bar" style="height:92%"><span>Landing</span></div></div></div></div>
-    </section>
+  <!-- ===================== Masthead ===================== -->
+  <header class="masthead">
+    <div>
+      <div class="logotype">Căn<span class="tick"> Cứ</span><span style="color:var(--amber)">*</span></div>
+      <div class="logotype-note">*mọi nội dung sinh ra đều có căn cứ — claim nào không có nguồn, claim đó không tồn tại.</div>
+    </div>
+    <div class="masthead-meta">
+      <b>UI tổng quan sản phẩm đích</b> · mockup tĩnh phục vụ báo cáo &amp; slide<br>
+      ĐATN UIT 2026 — Lê Văn Quang · Phạm Vũ Hải · GVHD: Cáp Phạm Đình Thăng
+    </div>
+  </header>
 
-    <section class="page" id="projects"><div class="section-title"><div><h1>Kho tri thức dự án</h1><p>Canonical facts, entity relationships và provenance được quản lý trong PostgreSQL.</p></div><button class="btn primary">＋ Nhập dữ liệu</button></div><div class="tabs"><button class="tab active">Knowledge Graph</button><button class="tab">Facts (1.284)</button><button class="tab">Nguồn (67)</button><button class="tab">Ảnh (214)</button></div><div class="grid knowledge"><div><div class="graph"><div class="node project-node" style="left:43%;top:43%">Vinhomes Grand Park</div><div class="node" style="left:12%;top:18%">The Origami</div><div class="node" style="left:15%;top:68%">The Beverly</div><div class="node" style="left:68%;top:18%">Tòa S2</div><div class="node" style="left:72%;top:67%">Căn 2PN</div><div class="node amenity" style="left:40%;top:8%">Vinschool</div><div class="node amenity" style="left:41%;top:78%">Công viên 36ha</div><div class="node amenity" style="left:76%;top:40%">Vincom Mega Mall</div><i class="edge" style="left:23%;top:30%;width:245px;transform:rotate(19deg)"></i><i class="edge" style="left:25%;top:71%;width:210px;transform:rotate(-24deg)"></i><i class="edge" style="left:53%;top:46%;width:240px;transform:rotate(-34deg)"></i><i class="edge" style="left:54%;top:48%;width:240px;transform:rotate(27deg)"></i><i class="edge" style="left:53%;top:45%;width:130px;transform:rotate(-89deg)"></i><i class="edge" style="left:54%;top:49%;width:145px;transform:rotate(82deg)"></i><i class="edge" style="left:54%;top:48%;width:275px;transform:rotate(-3deg)"></i></div><div class="legend"><span><i class="dot" style="background:#176f62"></i>Dự án</span><span><i class="dot" style="background:#90c9be"></i>Phân khu / sản phẩm</span><span><i class="dot" style="background:#e5b368"></i>Tiện ích</span></div></div><div class="card"><h3>Entity inspector</h3><div class="field"><label>ENTITY ĐANG CHỌN</label><input value="Căn 2PN · Tòa S2" readonly></div><table class="table"><tr><th>QUAN HỆ</th><th>ĐỐI TƯỢNG</th><th>TIN CẬY</th></tr><tr><td>PART_OF</td><td>Tòa S2</td><td>100%</td></tr><tr><td>NEAR</td><td>Vinschool</td><td>94%</td></tr><tr><td>ACCESS_TO</td><td>Công viên</td><td>91%</td></tr><tr><td>SUITABLE_FOR</td><td>Gia đình trẻ</td><td>86%</td></tr></table><button class="btn" style="width:100%;margin-top:16px">Xem source evidence</button></div></div></section>
+  <nav class="screen-nav" aria-label="Điều hướng màn hình">
+    <a href="#s1">1 · Đăng nhập</a>
+    <a href="#s2">2 · Dashboard dự án</a>
+    <a href="#s3">3 · Content Studio + Evidence</a>
+    <a href="#s4">4 · Duyệt &amp; phiên bản</a>
+    <a href="#s5">5 · So sánh thí nghiệm A–D</a>
+  </nav>
 
-    <section class="page" id="studio"><div class="section-title"><div><h1>Content Studio</h1><p>Tạo nội dung từ brief, graph relationships và nguồn đã kiểm chứng.</p></div><div><button class="btn">Lưu nháp</button> <button class="btn primary">✦ Tạo nội dung</button></div></div><div class="grid studio"><div class="card"><h3>1 · Thiết lập brief</h3><div class="field"><label>DỰ ÁN</label><select><option>Vinhomes Grand Park</option></select></div><div class="field"><label>SẢN PHẨM</label><select><option>Căn 2PN · Tòa S2</option></select></div><div class="field"><label>PERSONA</label><select><option>Gia đình trẻ</option></select></div><div class="field"><label>KÊNH NỘI DUNG</label><div class="channel-grid"><div class="channel selected">Facebook</div><div class="channel">Email</div><div class="channel">Listing</div><div class="channel">Landing</div></div></div><div class="field"><label>THÔNG ĐIỆP BỔ SUNG</label><textarea>Nhấn mạnh không gian sống xanh và tiện ích giáo dục.</textarea></div><button class="btn primary" style="width:100%">Truy xuất &amp; tạo bản nháp</button></div>
-      <div class="card"><div class="editor-head"><div><b>Bản nháp Facebook</b><br><span>Version 3 · RAG + Graph + QLoRA</span></div><span class="pill">Đã kiểm tra facts</span></div><div class="content-preview"><h2>Một tổ ấm vừa đủ gần thiên nhiên, vừa trọn tiện nghi cho gia đình trẻ.</h2><p>Căn hộ 2 phòng ngủ tại tòa S2 mang đến không gian riêng tư cho bố mẹ và góc nhỏ đầy cảm hứng cho con. Từ đây, gia đình dễ dàng tiếp cận <span class="highlight">Vinschool</span>, <span class="highlight">công viên trung tâm</span> cùng hệ tiện ích nội khu tại Vinhomes Grand Park.</p><p>Không chỉ là nơi để ở, đây còn là nơi mỗi ngày của gia đình được bắt đầu nhẹ nhàng hơn — với nhiều thời gian cho nhau và nhiều khoảng xanh để cùng trải nghiệm.</p><p><b>Khám phá căn 2PN phù hợp với kế hoạch của gia đình bạn.</b></p></div><div class="top-actions"><button class="btn">↶ Tạo lại</button><button class="btn">Chỉnh sửa</button><button class="btn primary">Gửi duyệt</button></div></div>
-      <div class="card"><h3>3 · Bằng chứng &amp; kiểm tra</h3><div class="evidence"><div class="evidence-top"><b>Vinschool</b><span class="confidence">94% · VERIFIED</span></div><p>Được truy xuất từ hồ sơ tiện ích dự án.</p><div class="path">Căn 2PN → Tòa S2 → Project → HAS_AMENITY → Vinschool</div></div><div class="evidence"><div class="evidence-top"><b>Công viên trung tâm</b><span class="confidence">91% · VERIFIED</span></div><p>Nguồn: Brochure dự án, trang 18.</p><div class="path">Tòa S2 → PART_OF → Grand Park → HAS_AMENITY → Công viên</div></div><div class="evidence"><div class="evidence-top"><b>“Dễ dàng tiếp cận”</b><span class="confidence">RULE PASS</span></div><p>Không đưa số phút hoặc khoảng cách khi nguồn chưa xác nhận.</p></div><div class="evidence"><div class="evidence-top"><b>Brand &amp; SEO</b><span class="confidence">6/6 PASS</span></div><p>Tone ấm áp · CTA hợp lệ · Không có từ cấm.</p></div></div></div></section>
+  <!-- ===================== 1. LOGIN ===================== -->
+  <section class="screen" id="s1">
+    <div class="screen-label"><span class="no">MÀN HÌNH 1/5</span><h2>Đăng nhập &amp; phân quyền</h2></div>
+    <p class="screen-cap">Ba vai trò <b>admin · marketer · reviewer</b> được kiểm tra ở backend (RBAC + tenant isolation), không chỉ ẩn nút trên giao diện.</p>
+    <div class="window">
+      <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="urlbar">https://<b>cancu.uit.demo</b>/dang-nhap</div></div>
+      <div class="login-stage">
+        <div class="login-brand">
+          <div>
+            <div class="big">Viết nội dung BĐS<br>từ <em>dữ liệu thật</em>,<br>không phải từ trí tưởng tượng.</div>
+          </div>
+          <ul>
+            <li>4.795 tin đăng · 816 dự án · 37.349 ảnh đã lập chỉ mục</li>
+            <li>Mỗi claim gắn mã nguồn kiểm chứng được</li>
+            <li>4 kênh: mô tả BĐS · Facebook · email · landing SEO</li>
+          </ul>
+        </div>
+        <div class="login-form">
+          <h3>Đăng nhập hệ thống</h3>
+          <div class="field"><label>Email</label><div class="input">quang@cancu.demo</div></div>
+          <div class="field"><label>Mật khẩu</label><div class="input">••••••••••</div></div>
+          <span class="btn primary" style="text-align:center">Đăng nhập</span>
+          <div class="roles">Vai trò demo: <span class="role">ADMIN</span> <span class="role" style="background:var(--brand)">MARKETER</span> <span class="role" style="background:var(--amber)">REVIEWER</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <section class="page" id="review"><div class="section-title"><div><h1>Hàng đợi kiểm duyệt</h1><p>Con người quyết định trước khi nội dung được export hoặc sử dụng.</p></div><button class="btn">Bộ lọc · Tất cả</button></div><div class="card"><table class="table"><tr><th>NỘI DUNG</th><th>DỰ ÁN</th><th>KÊNH</th><th>FACT SCORE</th><th>TRẠNG THÁI</th><th></th></tr><tr><td><b>Tổ ấm xanh cho gia đình trẻ</b><br><small>Version 3 · 10 phút trước</small></td><td>Grand Park</td><td>Facebook</td><td>96%</td><td><span class="pill">Chờ duyệt</span></td><td>•••</td></tr><tr><td><b>Khám phá căn hộ 2PN</b><br><small>Version 1 · 36 phút trước</small></td><td>Ocean Park</td><td>Email</td><td>93%</td><td><span class="pill">Chờ duyệt</span></td><td>•••</td></tr><tr><td><b>Sống trọn tiện nghi giữa đại đô thị</b><br><small>Version 4 · Hôm qua</small></td><td>Grand Park</td><td>Landing</td><td>98%</td><td><span class="pill">Đã duyệt</span></td><td>•••</td></tr></table></div></section>
+  <!-- ===================== 2. DASHBOARD ===================== -->
+  <section class="screen" id="s2">
+    <div class="screen-label"><span class="no">MÀN HÌNH 2/5</span><h2>Dashboard dự án</h2></div>
+    <p class="screen-cap">Kho tri thức theo dự án, dựng từ dữ liệu crawl <b>DataBDS</b>: mức đầy đủ facts quyết định dự án nào đủ điều kiện sinh nội dung.</p>
+    <div class="window">
+      <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="urlbar">https://<b>cancu.uit.demo</b>/du-an</div></div>
+      <div class="appbar">
+        <span class="mark">Căn<span class="tick"> Cứ</span></span>
+        <nav><span class="on">Dự án</span><span>Content Studio</span><span>Duyệt nội dung</span><span>Thí nghiệm</span><span>Quản trị</span></nav>
+        <span class="who">quang@cancu.demo <span class="role" style="background:var(--brand)">MARKETER</span></span>
+      </div>
+      <div class="dash">
+        <aside class="side">
+          <div class="item on">Tất cả dự án</div>
+          <div class="item">Đủ điều kiện sinh nội dung</div>
+          <div class="item">Thiếu facts — cần bổ sung</div>
+          <div class="item">Nguồn &amp; giấy phép</div>
+          <div class="item">Hàng chờ ingestion</div>
+        </aside>
+        <div class="main">
+          <div class="statrow">
+            <div class="stat"><div class="v">816</div><div class="k">dự án nhận dạng từ nguồn</div></div>
+            <div class="stat"><div class="v">4.795</div><div class="k">tin đăng đã thu thập</div></div>
+            <div class="stat"><div class="v">37.349</div><div class="k">ảnh lưu trữ nội bộ</div></div>
+            <div class="stat"><div class="v">100%</div><div class="k">facts có mã nguồn truy vết</div></div>
+          </div>
+          <table class="list">
+            <thead><tr><th>Dự án</th><th>Khu vực</th><th>Tin</th><th>Ảnh</th><th>Độ đầy đủ facts</th><th>Trạng thái</th></tr></thead>
+            <tbody>
+              <tr><td><b>Vinhomes Central Park</b></td><td>Bình Thạnh, TP.HCM</td><td>18</td><td>142</td><td><div class="meter"><i style="width:92%"></i></div></td><td><span class="chip ok">Sẵn sàng sinh nội dung</span></td></tr>
+              <tr><td><b>Vinhomes Smart City</b></td><td>Nam Từ Liêm, Hà Nội</td><td>16</td><td>121</td><td><div class="meter"><i style="width:87%"></i></div></td><td><span class="chip ok">Sẵn sàng sinh nội dung</span></td></tr>
+              <tr><td><b>Sunshine City</b></td><td>Bắc Từ Liêm, Hà Nội</td><td>12</td><td>96</td><td><div class="meter"><i style="width:74%"></i></div></td><td><span class="chip warn">Thiếu facts giá</span></td></tr>
+              <tr><td><b>Mizuki Park</b></td><td>Bình Chánh, TP.HCM</td><td>11</td><td>88</td><td><div class="meter"><i style="width:81%"></i></div></td><td><span class="chip ok">Sẵn sàng sinh nội dung</span></td></tr>
+              <tr><td><b>Masteri West Heights</b></td><td>Nam Từ Liêm, Hà Nội</td><td>10</td><td>73</td><td><div class="meter"><i style="width:58%"></i></div></td><td><span class="chip dim">Chờ xác nhận visual facts</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <section class="page" id="experiments"><div class="section-title"><div><h1>Trung tâm thí nghiệm</h1><p>So sánh minh bạch chất lượng generation A–D và retrieval R1–R4.</p></div><button class="btn primary">Chạy benchmark</button></div><div class="grid experiment"><div class="card"><h3>Generation benchmark · Frozen test v1</h3><div class="config"><strong>A</strong><span>Prompt-only</span><div class="quality"><i style="width:63%"></i></div><b>63.1</b></div><div class="config"><strong>B</strong><span>Hybrid RAG</span><div class="quality"><i style="width:78%"></i></div><b>78.4</b></div><div class="config"><strong>C</strong><span>QLoRA fine-tuned</span><div class="quality"><i style="width:75%"></i></div><b>75.2</b></div><div class="config"><strong>D</strong><span>Graph + RAG + QLoRA</span><div class="quality"><i style="width:91%"></i></div><b>91.0</b></div><p class="mini-note">Điểm minh họa UI, không phải kết quả nghiên cứu thật. Dashboard thật sẽ đọc từ evaluation runs đã version hóa.</p></div><div class="card"><h3>Retrieval R1–R4</h3><table class="table"><tr><th>RUN</th><th>EVIDENCE</th><th>P95</th></tr><tr><td>R1 · Vector</td><td>78%</td><td>0.8s</td></tr><tr><td>R2 · Graph</td><td>82%</td><td>0.5s</td></tr><tr><td><b>R3 · Hybrid</b></td><td><b>94%</b></td><td>1.4s</td></tr><tr><td>R4 · MS GraphRAG</td><td>Research</td><td>6.8s</td></tr></table><p class="mini-note"><b>Gate tuần 5:</b> chỉ đưa Microsoft GraphRAG vào endpoint discovery nếu cải thiện global queries đủ lớn so với chi phí.</p></div></div></section>
-    <div class="footer-note">EstateAI product vision · Dữ liệu hiển thị chỉ nhằm minh họa giao diện đích</div>
-  </main>
-</div><script>
-  const pages=[...document.querySelectorAll('.page')],navs=[...document.querySelectorAll('.nav[data-page]')];
-  function go(id){pages.forEach(p=>p.classList.toggle('active',p.id===id));navs.forEach(n=>n.classList.toggle('active',n.dataset.page===id));window.scrollTo({top:0,behavior:'smooth'});}
-  navs.forEach(n=>n.addEventListener('click',()=>go(n.dataset.page)));document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
-  document.querySelectorAll('.channel').forEach(c=>c.addEventListener('click',()=>{document.querySelectorAll('.channel').forEach(x=>x.classList.remove('selected'));c.classList.add('selected')}));
-</script></body></html>
+  <!-- ===================== 3. CONTENT STUDIO ===================== -->
+  <section class="screen" id="s3">
+    <div class="screen-label"><span class="no">MÀN HÌNH 3/5 — MÀN HÌNH TRUNG TÂM</span><h2>Content Studio &amp; Evidence Panel</h2></div>
+    <p class="screen-cap">Điểm khác biệt của hệ thống: bài viết bên trái, <b>căn cứ bên phải</b>. Mỗi claim mang chip trích dẫn <span class="cite">F1</span> trỏ về fact có nguồn; claim thiếu căn cứ bị gắn <span class="cite bad">!</span> và không được xuất bản. Đường đi tri thức (graph path ≤ 2 hop) giải thích vì sao hệ thống nói được điều đó.</p>
+    <div class="window">
+      <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="urlbar">https://<b>cancu.uit.demo</b>/studio/vinhomes-central-park</div></div>
+      <div class="appbar">
+        <span class="mark">Căn<span class="tick"> Cứ</span></span>
+        <nav><span>Dự án</span><span class="on">Content Studio</span><span>Duyệt nội dung</span><span>Thí nghiệm</span></nav>
+        <span class="who">quang@cancu.demo <span class="role" style="background:var(--brand)">MARKETER</span></span>
+      </div>
+      <div class="studio">
+        <aside class="brief">
+          <div class="group"><b>Kênh nội dung</b>
+            <div class="pills"><span class="pill">Mô tả BĐS</span><span class="pill on">Facebook</span><span class="pill">Email</span><span class="pill">Landing SEO</span></div>
+          </div>
+          <div class="group"><b>Persona khách hàng</b>
+            <div class="pills"><span class="pill on">Gia đình trẻ</span><span class="pill">Nhà đầu tư</span><span class="pill">Mua lần đầu</span></div>
+          </div>
+          <div class="group"><b>Cấu hình sinh</b>
+            <div class="pills"><span class="pill">A · Prompt</span><span class="pill">B · RAG</span><span class="pill">C · QLoRA</span><span class="pill on">D · RAG+QLoRA</span></div>
+          </div>
+          <div class="group"><b>Brand guideline</b>
+            <div style="font-size:12.5px;color:var(--muted)">Giọng: gần gũi, đáng tin · CTA bắt buộc · Cấm: "cam kết lợi nhuận", "giá rẻ nhất"</div>
+          </div>
+          <span class="btn primary" style="text-align:center">Sinh nội dung</span>
+          <span class="btn ghost" style="text-align:center;font-size:12px">model: qwen3-8b+adapter_v3 · prompt v2.1 · snapshot kb_0912</span>
+        </aside>
+
+        <div class="draft">
+          <div class="draft-head">
+            <span class="chip ok">Draft v2 · cấu hình D</span>
+            <span class="chip dim">7/8 claim có căn cứ</span>
+            <span class="chip warn">1 cảnh báo</span>
+            <span style="margin-left:auto" class="btn ghost">Gửi duyệt →</span>
+          </div>
+          <div class="draft-card">
+            <h3>Tổ ấm đầu tiên cho gia đình nhỏ ngay trong lòng Bình Thạnh 🌿</h3>
+            <p>Căn hộ 2 phòng ngủ 72m²<span class="cite">F1</span> tại <b>Vinhomes Central Park</b> — nơi con bạn lớn lên cạnh công viên ven sông 14ha<span class="cite">F2</span> và chỉ vài phút đi bộ tới trường Vinschool trong nội khu<span class="cite">F3</span>.</p>
+            <p>Cư dân tòa Landmark 2<span class="cite">F4</span> tận hưởng hồ bơi, gym và khu vui chơi trẻ em<span class="cite">F5</span>, kết nối trung tâm Quận 1 qua đường Nguyễn Hữu Cảnh<span class="cite">F6</span>. Pháp lý sổ hồng lâu dài<span class="cite">F7</span>.</p>
+            <p>Mức giá "tốt nhất khu vực"<span class="cite bad">!</span> — <em>claim bị giữ lại: không có fact giá còn hiệu lực trong kho tri thức.</em></p>
+            <p class="cta">→ Inbox ngay để nhận bảng tính chi phí cho gia đình trẻ.</p>
+          </div>
+          <div class="warnbox"><b>⚠ warnings[1]:</b> claim về giá không có <span style="font-family:var(--mono)">supported_fact_id</span> — hệ thống đã loại khỏi bản xuất bản và ghi vào audit log. Reviewer có thể bổ sung fact giá kèm nguồn để mở lại claim.</div>
+        </div>
+
+        <aside class="evidence">
+          <h4 class="paneltitle">Evidence — facts đã dùng</h4>
+          <div class="fact"><span class="fid">F1</span> · Diện tích 72m², 2PN 2WC<div class="src">src#4521 · batdongsan.com.vn/…-pr45213</div></div>
+          <div class="fact"><span class="fid">F2</span> · Công viên ven sông 14ha nội khu<div class="src">src#4521 · trích mô tả gốc</div></div>
+          <div class="fact"><span class="fid">F3</span> · Vinschool trong nội khu dự án<div class="src">src#4498 · batdongsan.com.vn/…-pr44981</div></div>
+          <div class="fact"><span class="fid">F7</span> · Pháp lý: sổ hồng lâu dài<div class="src">src#4502 · needs_review: đã duyệt ✓</div></div>
+
+          <h4 class="paneltitle" style="margin-top:18px">Đường đi tri thức (≤ 2 hop)</h4>
+          <div class="gpath">
+            <div class="gnode">Căn 2PN 72m²<small>UnitType · src#4521</small></div>
+            <div class="gedge">│ PART_OF</div>
+            <div class="gnode">Tòa Landmark 2<small>Building · src#4498</small></div>
+            <div class="gedge">│ NEAR (nội khu)</div>
+            <div class="gnode">Vinschool Central Park<small>Amenity · src#4498</small></div>
+          </div>
+
+          <h4 class="paneltitle" style="margin-top:18px">Visual facts (đã xác nhận)</h4>
+          <div class="fact" style="border-left-color:var(--brand)"><span class="fid" style="color:var(--brand)">V1</span> · Phòng khách, sàn gỗ, ánh sáng tự nhiên <span class="chip ok" style="font-size:10px">conf 0.93 ✓</span><div class="src">img#31022 · người dùng xác nhận</div></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 4. REVIEW ===================== -->
+  <section class="screen" id="s4">
+    <div class="screen-label"><span class="no">MÀN HÌNH 4/5</span><h2>Duyệt nội dung &amp; lịch sử phiên bản</h2></div>
+    <p class="screen-cap">Vòng đời nội dung <b>draft → generated → needs_review → approved → exported</b>; mỗi lần sửa tạo phiên bản mới (không ghi đè) — đây vừa là tính năng sản phẩm, vừa là dữ liệu phản hồi (tầng T4) cho nghiên cứu.</p>
+    <div class="window">
+      <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="urlbar">https://<b>cancu.uit.demo</b>/duyet/ct-1204</div></div>
+      <div class="appbar">
+        <span class="mark">Căn<span class="tick"> Cứ</span></span>
+        <nav><span>Dự án</span><span>Content Studio</span><span class="on">Duyệt nội dung</span><span>Thí nghiệm</span></nav>
+        <span class="who">hai@cancu.demo <span class="role" style="background:var(--amber)">REVIEWER</span></span>
+      </div>
+      <div class="review">
+        <div class="rv-main">
+          <div class="flow">
+            <span class="st done">Draft</span><span class="sep">→</span>
+            <span class="st done">Generated</span><span class="sep">→</span>
+            <span class="st now">Needs review</span><span class="sep">→</span>
+            <span class="st">Approved</span><span class="sep">→</span>
+            <span class="st">Exported</span>
+          </div>
+          <div class="diff">
+            <div class="row">Căn hộ 2 phòng ngủ 72m²<span class="cite">F1</span> tại Vinhomes Central Park…</div>
+            <div class="row del">Mức giá tốt nhất khu vực, cơ hội đầu tư sinh lời chắc chắn.</div>
+            <div class="row add">Liên hệ để nhận bảng giá cập nhật theo tháng kèm chính sách thanh toán.<span class="cite">F8</span></div>
+            <div class="row">→ Inbox ngay để nhận bảng tính chi phí cho gia đình trẻ.</div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:18px;flex-wrap:wrap">
+            <span class="btn primary">Phê duyệt v3</span>
+            <span class="btn">Yêu cầu sửa</span>
+            <span class="btn danger">Từ chối</span>
+            <span class="btn ghost" style="margin-left:auto">Export: HTML · DOCX · JSON</span>
+          </div>
+        </div>
+        <aside class="rv-side">
+          <h4 class="paneltitle">Lịch sử phiên bản</h4>
+          <div class="ver on"><b>v3 — bản đang duyệt</b><div class="meta">reviewer sửa claim giá · +F8</div></div>
+          <div class="ver"><b>v2 — critic refine</b><div class="meta">constraint pass 96% · 1 warning</div></div>
+          <div class="ver"><b>v1 — generated (D)</b><div class="meta">qwen3-8b+adapter_v3 · seed 42<br>latency 6.8s · 1.9k tokens</div></div>
+          <h4 class="paneltitle" style="margin-top:18px">Ghi chú reviewer</h4>
+          <div class="fact" style="border-left-color:var(--brand)">"Bỏ cụm cam kết lợi nhuận — vi phạm forbidden terms của brand." <div class="src">hai@ · 14:02 · lưu vào audit log</div></div>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== 5. EXPERIMENTS ===================== -->
+  <section class="screen" id="s5">
+    <div class="screen-label"><span class="no">MÀN HÌNH 5/5</span><h2>Dashboard so sánh thí nghiệm A–D</h2></div>
+    <p class="screen-cap">Cùng một brief chạy qua 4 cấu hình trên frozen test set — bảng số minh họa <b>giả thuyết nghiên cứu</b>: RAG kéo độ đúng dữ kiện, QLoRA kéo độ hợp kênh/persona, kết hợp D dẫn đầu tổng thể. <em>(Số liệu placeholder — thay bằng kết quả thật ở Tuần 6.)</em></p>
+    <div class="window">
+      <div class="chrome"><div class="dots"><i></i><i></i><i></i></div><div class="urlbar">https://<b>cancu.uit.demo</b>/thi-nghiem/run-frozen-01</div></div>
+      <div class="appbar">
+        <span class="mark">Căn<span class="tick"> Cứ</span></span>
+        <nav><span>Dự án</span><span>Content Studio</span><span>Duyệt nội dung</span><span class="on">Thí nghiệm</span></nav>
+        <span class="who">quang@cancu.demo <span class="role">ADMIN</span></span>
+      </div>
+      <div class="lab">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span class="chip dim">frozen_test v1 · 48 briefs</span>
+          <span class="chip dim">cùng seed &amp; decoding</span>
+          <span class="chip dim">human eval: 3 rater, blind</span>
+          <span class="chip ok">tái lập: run_frozen_01.sh</span>
+        </div>
+        <div class="lab-grid">
+          <div class="cfg"><div class="id">A</div><div class="nm">Prompt-only</div>
+            <div class="bar"><span>Fact precision</span><div class="tr"><i class="amber" style="width:62%"></i></div><span class="n">62%</span></div>
+            <div class="bar"><span>Claim vô căn cứ</span><div class="tr"><i class="amber" style="width:31%"></i></div><span class="n">31%</span></div>
+            <div class="bar"><span>Channel fit</span><div class="tr"><i style="width:58%"></i></div><span class="n">3.1</span></div>
+          </div>
+          <div class="cfg"><div class="id">B</div><div class="nm">RAG</div>
+            <div class="bar"><span>Fact precision</span><div class="tr"><i style="width:88%"></i></div><span class="n">88%</span></div>
+            <div class="bar"><span>Claim vô căn cứ</span><div class="tr"><i class="amber" style="width:9%"></i></div><span class="n">9%</span></div>
+            <div class="bar"><span>Channel fit</span><div class="tr"><i style="width:62%"></i></div><span class="n">3.3</span></div>
+          </div>
+          <div class="cfg"><div class="id">C</div><div class="nm">QLoRA</div>
+            <div class="bar"><span>Fact precision</span><div class="tr"><i class="amber" style="width:68%"></i></div><span class="n">68%</span></div>
+            <div class="bar"><span>Claim vô căn cứ</span><div class="tr"><i class="amber" style="width:24%"></i></div><span class="n">24%</span></div>
+            <div class="bar"><span>Channel fit</span><div class="tr"><i style="width:84%"></i></div><span class="n">4.2</span></div>
+          </div>
+          <div class="cfg win"><div class="id">D <span class="chip ok" style="vertical-align:middle">production</span></div><div class="nm">RAG + QLoRA</div>
+            <div class="bar"><span>Fact precision</span><div class="tr"><i style="width:93%"></i></div><span class="n">93%</span></div>
+            <div class="bar"><span>Claim vô căn cứ</span><div class="tr"><i class="amber" style="width:5%"></i></div><span class="n">5%</span></div>
+            <div class="bar"><span>Channel fit</span><div class="tr"><i style="width:88%"></i></div><span class="n">4.4</span></div>
+          </div>
+        </div>
+        <table class="list">
+          <thead><tr><th>Truy xuất</th><th>Recall@10</th><th>Path precision</th><th>Evidence recall</th><th>Latency p95</th><th>Ghi chú</th></tr></thead>
+          <tbody>
+            <tr><td><b>R1</b> · vector + FTS</td><td>0.71</td><td>—</td><td>0.66</td><td>320ms</td><td>baseline</td></tr>
+            <tr><td><b>R2</b> · graph ≤2 hop</td><td>0.54</td><td>0.89</td><td>0.58</td><td>210ms</td><td>mạnh ở câu hỏi quan hệ</td></tr>
+            <tr><td><b>R3</b> · hybrid + RRF</td><td><b>0.83</b></td><td><b>0.91</b></td><td><b>0.79</b></td><td>410ms</td><td><span class="chip ok">cấu hình production</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footnote">
+    <span><b>Ghi chú:</b> mockup tĩnh — toàn bộ số liệu màn hình 5 là placeholder minh họa giả thuyết, sẽ thay bằng kết quả thực nghiệm Tuần 6; tên dự án lấy từ dữ liệu DataBDS thật.</span>
+    <span>Kế hoạch chi tiết: Plan/01–04 · Workflow: Plan/WORKFLOW_TONG_THE.svg</span>
+  </footer>
+</div>
+</body>
+</html>
