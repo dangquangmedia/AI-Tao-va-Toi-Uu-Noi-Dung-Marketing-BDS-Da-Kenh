@@ -9,6 +9,7 @@ __pycache__/
 node_modules/
 .next/
 out/
+*.log
 
 # Env & secrets
 .env
