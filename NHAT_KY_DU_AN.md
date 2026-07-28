@@ -3,8 +3,8 @@
 > **File bắt đầu duy nhất cho phiên làm việc mới.** Khi mở lại dự án, hãy đọc file này trước. Chỉ mở các tài liệu hoặc mã nguồn được dẫn ở đây khi nhiệm vụ hiện tại thực sự cần chi tiết hơn.
 
 **Dự án:** AI tạo và tối ưu nội dung marketing BĐS đa kênh
-**Cập nhật gần nhất:** 27/07/2026 (khuya)
-**Trạng thái tổng thể:** Tuần 1 đã merge vào `main`; **Tuần 2 hoàn tất** trên branch `tuan-02-lam-sach-graph` — toàn bộ 4.795 tin đã qua pipeline D1–D5 (4.794 clean, 30.820 facts có provenance, graph 1.102 node/1.535 cạnh), chạy lại không sinh duplicate, query được path `Project → Building → UnitType` trên dữ liệu thật, 56/56 tests pass. Còn thiếu duy nhất staging URL (chờ tài khoản cloud).
+**Cập nhật gần nhất:** 28/07/2026
+**Trạng thái tổng thể:** Tuần 1 + Tuần 2 đã merge vào `main`; **Tuần 3 hoàn tất** trên branch `tuan-03-knowledge-base` — knowledge base 9.656 chunk đã embed bằng **BAAI/bge-m3 chạy trên GPU**, FTS tiếng Việt + pgvector HNSW, entity resolution nâng lên 617 dự án, `dataset_v1` đóng băng với leakage audit **đạt**, 72 gold query, 1.500 mẫu SFT nháp, R1/R2 chạy thật (R1-vector precision@10 = 0,850 · R2-graph recall = 0,862), 80/80 tests pass. Còn thiếu duy nhất staging URL (chờ tài khoản cloud).
 
 ---
 
@@ -49,16 +49,17 @@
 - **Lê Văn Quang:** hệ thống + tích hợp — backend/frontend, database, auth/RBAC/tenant, graph storage/traversal, hybrid retrieval, CI/CD, dashboard, deployment.
 - **Phạm Vũ Hải:** dữ liệu + mô hình — crawler/contract, làm sạch, SFT dataset, QLoRA, evaluation, vision data.
 
-## 5. Việc cần làm tiếp theo (đầu Tuần 3)
+## 5. Việc cần làm tiếp theo (đầu Tuần 4)
 
-1. **Chọn nền tảng cloud + cấp tài khoản** → deploy staging (carry-over từ Tuần 1, chưa xong).
-2. Chunking + embedding (bge-m3 phải benchmark) + FTS index trên `clean_listings` tier A/B → R1 chạy được.
-3. Entity resolution + alias để nâng độ phủ dự án (hiện 347) và lấy tên dự án có dấu.
-4. Hải: split 70/15/15 theo project + leakage audit, `dataset_v1` + data card, SFT draft v1, 60–90 gold retrieval queries.
-5. Chốt danh sách human rater (theo `Plan/03` §5) — không để trễ tới Tuần 6.
-6. Sau mỗi buổi: cập nhật file log này bằng bằng chứng thật (file/test/URL/commit).
+1. **Chọn nền tảng cloud + cấp tài khoản** → deploy staging (carry-over từ Tuần 1, vẫn chưa xong).
+2. **R3 = RRF có trọng số (R1 + R2)** + query router. Bằng chứng Tuần 3 cho thấy RRF trọng số bằng nhau làm giảm chất lượng (0,537 so với 0,847 của vector đơn thuần).
+3. Cải thiện nhánh lexical: BM25 có IDF + tách từ tiếng Việt (R1-fts hiện chỉ 0,086 precision).
+4. Hải: soát tay 72 gold query rồi khóa benchmark; prompt baseline + chạy A/B.
+5. Content Studio 4 kênh + Evidence panel (dùng chunk + facts đã có provenance).
+6. Chốt danh sách human rater (theo `Plan/03` §5) — không để trễ tới Tuần 6.
+7. **Chuẩn bị GPU thuê cho Tuần 5:** GTX 1650 Ti 4GB đủ chạy embedding nhưng không đủ QLoRA 7–8B (cần ≥12GB).
 
-Chi tiết + cách chạy local: `docs/checkpoints/week_01_report.md`, `docs/checkpoints/week_02_report.md`.
+Chi tiết + cách chạy local: `docs/checkpoints/week_01_report.md`, `week_02_report.md`, `week_03_report.md`.
 
 ## 6. Nguyên tắc giữ phạm vi
 
@@ -85,14 +86,19 @@ Nếu trễ, cắt theo thứ tự: DPO → ablation D+V+R → video/đa ngôn n
 | 27/07/2026 | **Tuần 2 — D1–D5 + graph** | Migration `8032b6027123`; 56/56 tests; 4.795 tin qua pipeline → 4.794 clean · 30.820 facts · 1.102 node · 1.535 cạnh · 1 quarantine | Chạy lại: `inserted=0 unchanged=4794`, facts/node/cạnh +0 → idempotent |
 | 27/07/2026 | Gate query graph | `GET /api/graph/projects/sunshine-sky-city/paths` → `Sunshine Sky City → Tòa V8 → apartment-2pn` kèm URL nguồn | Đạt gate "query path Project → Building → UnitType" |
 | 27/07/2026 | Báo cáo chất lượng dữ liệu | `docs/checkpoints/week_02_data_quality.md` sinh bằng `pipeline_cli --report` | Giá 31,6% → 52,5%; dự án 347; phường/xã 99,9% |
+| 28/07/2026 | **Tuần 3 — knowledge base + dataset_v1** | Migration `4982a1adb98d` + `a7aad62eeea9`; 80/80 tests; 9.656 chunk embed bằng bge-m3 trên GPU (8,8 phút) | Index idempotent; FTS + pgvector HNSW chạy thật |
+| 28/07/2026 | Entity resolution bằng từ điển phường | `app/services/alias.py` | Dự án 347 → **617**; tin Tier A 862 → **1.539**; tên dự án có dấu |
+| 28/07/2026 | Đóng băng `dataset_v1` | `docs/checkpoints/week_03_data_card.md` | Split 69,3/14,7/16,0 theo đơn vị; **leakage audit đạt (0 rò rỉ)**; 72 gold query; 1.500 mẫu SFT nháp |
+| 28/07/2026 | Đánh giá retrieval R1/R2 | `docs/checkpoints/week_03_retrieval_eval.md` | R1-vector precision@10 **0,850** · MRR 0,921; R2-graph recall **0,862**; R1-fts chỉ 0,087 và RRF không trọng số kém hơn vector → cần BM25 + RRF có trọng số ở Tuần 4 |
 
 ## 9. Blocker và câu hỏi mở
 
 | Mức độ | Vấn đề | Owner | Hành động tiếp theo |
 |---|---|---|---|
 | Cao | **Chưa có staging URL** (carry-over từ Tuần 1) | Quang | Cần Anh chọn nền tảng cloud + cấp tài khoản; deploy ngay sau đó |
-| Trung bình | Độ phủ dự án mới 347 (18% tin), mã tòa 0,5% | Quang + Hải | Alias/dictionary + đối chiếu text ở Tuần 3; vision hỗ trợ ở Tuần 7 |
-| Trung bình | Chưa chốt GPU/budget cho QLoRA | Hải | Kiểm tra trước Tuần 5; pilot model nhỏ sớm |
+| Cao | **GPU máy (GTX 1650 Ti 4GB) không đủ QLoRA 7–8B** — đủ cho embedding | Hải + Quang | Thuê GPU ≥12GB theo giờ trước Tuần 5; pilot backbone nhỏ để dự phòng |
+| Trung bình | R1-fts yếu (precision 0,086) kéo RRF xuống dưới vector đơn thuần | Quang | Tuần 4: BM25 + tách từ tiếng Việt, RRF có trọng số |
+| Trung bình | 72 gold query chưa soát tay | Hải | Soát và bỏ cờ `needs_review` trước khi khóa benchmark |
 | Trung bình | Chưa chốt danh sách human rater | Cả nhóm | Chốt từ Tuần 3 theo `Plan/03` §5 |
 
 ---

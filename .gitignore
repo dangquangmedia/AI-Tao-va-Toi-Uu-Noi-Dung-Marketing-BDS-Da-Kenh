@@ -25,3 +25,6 @@ Thumbs.db
 
 # Ảnh crawl dung lượng lớn (giữ ngoài git)
 DataBDS/data/
+
+# Artefact sinh ra khi chạy pipeline (dataset SFT, dump) — không đưa vào git
+backend/artifacts/

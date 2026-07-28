@@ -183,3 +183,10 @@ def test_reparse_record_drop_pii_va_gan_flag():
     assert "0901" not in out["description_clean"]
     assert out["field_flags"]["project"] == "from_url"
     assert out["field_flags"]["price"] == "from_title"
+
+
+def test_khong_gan_nham_tinh_thanh_vi_trung_chuoi_con():
+    """Bug thật phát hiện qua UI: 'cho thuê' từng bị nhận là Thừa Thiên Huế."""
+    assert extract_location("Cho thuê căn hộ 2PN tại Thuận Giao")["city"] is None
+    assert extract_location("Bán nhà tại thành phố Huế")["city"] == "Thừa Thiên Huế"
+    assert extract_location("Chuyển nhượng gấp, thuê lại dài hạn")["city"] is None

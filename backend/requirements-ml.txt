@@ -1,0 +1,8 @@
+# Phụ thuộc cho embedding/fine-tuning — KHÔNG cài trong CI (nặng vài GB).
+# Test dùng embedder băm tất định nên CI chỉ cần requirements.txt.
+#
+# Cài trên máy có GPU NVIDIA (CUDA 12.4):
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+#   pip install -r requirements-ml.txt
+# Máy không GPU: pip install torch  (bản CPU, chậm hơn nhiều)
+sentence-transformers==3.3.1

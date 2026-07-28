@@ -12,9 +12,21 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.config import settings
 from app.db import Base
+
+try:  # pgvector chỉ cần khi chạy PostgreSQL; test SQLite dùng biến thể JSON
+    from pgvector.sqlalchemy import Vector
+except ImportError:  # pragma: no cover
+    Vector = None
+
+EMBEDDING_DIM = settings.embedding_dim
+# pgvector trên PostgreSQL, JSON trên SQLite → cùng một model chạy được ở cả hai
+_EMBEDDING_TYPE = Vector(EMBEDDING_DIM).with_variant(JSON, "sqlite") if Vector else JSON
+_TSVECTOR_TYPE = TSVECTOR().with_variant(Text, "sqlite")
 
 
 def _uuid() -> str:
@@ -144,6 +156,7 @@ class CleanListing(Base):
 
     property_type: Mapped[str] = mapped_column(String(30), default="")
     project_slug: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    project_name: Mapped[str | None] = mapped_column(String(200), nullable=True)  # tên có dấu
     project_confidence: Mapped[float] = mapped_column(Float, default=0.0)
     building_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
     unit_type_key: Mapped[str | None] = mapped_column(String(60), nullable=True)
@@ -209,6 +222,12 @@ class Fact(Base):
     valid_from: Mapped[str] = mapped_column(String(30), default="")
     valid_to: Mapped[str] = mapped_column(String(30), default="")  # rỗng = còn hiệu lực
 
+    # Vết review của người dùng (fact editor, Tuần 3) — sửa tay không làm mất giá trị máy
+    reviewed_by: Mapped[str | None] = mapped_column(String(32), ForeignKey("users.id"), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    review_note: Mapped[str] = mapped_column(Text, default="")
+    original_value_text: Mapped[str] = mapped_column(Text, default="")  # giá trị máy sinh trước khi sửa
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
@@ -253,4 +272,93 @@ class GraphEdge(Base):
     source_url: Mapped[str] = mapped_column(Text, default="")
     valid_from: Mapped[str] = mapped_column(String(30), default="")
     valid_to: Mapped[str] = mapped_column(String(30), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Chunk(Base):
+    """Đơn vị index cho retrieval (Tuần 3).
+
+    Mỗi chunk giữ nguyên provenance của tin nguồn để câu trả lời nào cũng trích được
+    nguồn. `embedding` dùng pgvector trên PostgreSQL; trên SQLite (test) lưu JSON để
+    cùng một code chạy được ở cả hai nơi. `search_vector` là FTS tiếng Việt đã bỏ dấu.
+    """
+
+    __tablename__ = "chunks"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "clean_listing_id", "chunk_type", "seq", name="uq_chunk_unit"),
+        Index("ix_chunks_project", "tenant_id", "project_slug"),
+        # Khai báo ngay trong model để autogenerate không xóa nhầm ở migration sau.
+        # Tùy chọn postgresql_* bị SQLite bỏ qua → test vẫn tạo index thường.
+        Index("ix_chunks_search_vector", "search_vector", postgresql_using="gin"),
+        Index(
+            "ix_chunks_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(32), ForeignKey("tenants.id"), index=True)
+    clean_listing_id: Mapped[str] = mapped_column(String(32), ForeignKey("clean_listings.id"), index=True)
+    source_row_id: Mapped[str] = mapped_column(String(32), ForeignKey("source_listings.id"))
+    source_listing_id: Mapped[str] = mapped_column(String(50), default="")
+    source_url: Mapped[str] = mapped_column(Text, default="")
+
+    project_slug: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    tier: Mapped[str] = mapped_column(String(1), default="C")
+    chunk_type: Mapped[str] = mapped_column(String(20))  # title | description | facts
+    seq: Mapped[int] = mapped_column(Integer, default=0)
+
+    text: Mapped[str] = mapped_column(Text)
+    token_count: Mapped[int] = mapped_column(Integer, default=0)
+    content_hash: Mapped[str] = mapped_column(String(64), default="")  # hash text → biết khi cần embed lại
+
+    embedding: Mapped[list | None] = mapped_column(_EMBEDDING_TYPE, nullable=True)
+    embedding_model: Mapped[str] = mapped_column(String(60), default="")
+    search_vector: Mapped[str | None] = mapped_column(_TSVECTOR_TYPE, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class DatasetSplit(Base):
+    """Chia tập theo project/cụm dedup — đóng băng theo `dataset_version` (Plan/02 §6)."""
+
+    __tablename__ = "dataset_splits"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "dataset_version", "unit_type", "unit_key", name="uq_dataset_split_unit"
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(32), ForeignKey("tenants.id"), index=True)
+    dataset_version: Mapped[str] = mapped_column(String(30), index=True)
+    unit_type: Mapped[str] = mapped_column(String(20))  # project | cluster
+    unit_key: Mapped[str] = mapped_column(String(160))
+    split: Mapped[str] = mapped_column(String(12), index=True)  # train | validation | test
+    stratum: Mapped[str] = mapped_column(String(20), default="")  # nhóm quy mô để chia cân đối
+    n_listings: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class RetrievalQuery(Base):
+    """Gold query cho benchmark R1–R3 (Plan/02 §8, protocol ở Plan/03)."""
+
+    __tablename__ = "retrieval_queries"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "dataset_version", "query_key", name="uq_retrieval_query"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(32), ForeignKey("tenants.id"), index=True)
+    dataset_version: Mapped[str] = mapped_column(String(30), index=True)
+    query_key: Mapped[str] = mapped_column(String(64))
+    query_type: Mapped[str] = mapped_column(String(20), index=True)
+    question: Mapped[str] = mapped_column(Text)
+    split: Mapped[str] = mapped_column(String(12), default="test")
+    project_slug: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    expected_listing_ids: Mapped[list] = mapped_column(JSON, default=list)
+    expected_entities: Mapped[list] = mapped_column(JSON, default=list)
+    generator: Mapped[str] = mapped_column(String(30), default="")  # template sinh ra query
+    needs_review: Mapped[bool] = mapped_column(default=True)  # chờ Hải soát tay
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

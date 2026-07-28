@@ -1,6 +1,6 @@
 # Báo cáo chất lượng dữ liệu sau pipeline D1–D5
 
-> Sinh tự động bằng `python -m app.pipeline_cli --report` lúc 27/07/2026 23:32. Mọi con số đo trực tiếp trên PostgreSQL, không nhập tay.
+> Sinh tự động bằng `python -m app.pipeline_cli --report` lúc 28/07/2026 15:37. Mọi con số đo trực tiếp trên PostgreSQL, không nhập tay.
 
 ## 1. Quy mô
 
@@ -9,10 +9,10 @@
 | Tin trong raw zone | 4.795 |
 | Tin qua được contract v1 (clean) | 4.794 |
 | Bản ghi quarantine | 1 |
-| Canonical facts | 30.820 |
-| Fact cần review | 4.183 |
-| Node graph | 1.102 |
-| Cạnh graph | 1.535 |
+| Canonical facts | 31.167 |
+| Fact cần review | 4.281 |
+| Node graph | 1.941 |
+| Cạnh graph | 2.653 |
 | Cụm dedup | 4.750 |
 | Tin bị coi là bản trùng | 44 |
 
@@ -20,11 +20,11 @@
 
 | Trường | Số tin có giá trị | Tỷ lệ |
 |---|---:|---:|
-| Dự án (từ canonical_url) | 862 | 18.0% |
-| Mã tòa/block | 26 | 0.5% |
-| Phường/xã (từ URL) | 4.792 | 100.0% |
+| Dự án (từ canonical_url) | 1.539 | 32.1% |
+| Mã tòa/block | 124 | 2.6% |
+| Phường/xã (từ URL) | 4.793 | 100.0% |
 | Quận/huyện | 907 | 18.9% |
-| Tỉnh/thành | 1.795 | 37.4% |
+| Tỉnh/thành | 1.366 | 28.5% |
 | Diện tích | 4.776 | 99.6% |
 | Số phòng ngủ | 3.206 | 66.9% |
 | Giá tổng | 2.519 | 52.5% |
@@ -38,9 +38,9 @@
 
 | Giá trị | Số lượng |
 |---|---:|
-| C | 2.110 |
-| B | 1.822 |
-| A | 862 |
+| B | 1.679 |
+| C | 1.576 |
+| A | 1.539 |
 
 **Theo loại hình**
 
@@ -81,28 +81,28 @@
 | Giá trị | Số lượng |
 |---|---:|
 | property_type | 4.794 |
-| ward | 4.792 |
+| ward | 4.793 |
 | area_m2 | 4.776 |
 | bedrooms | 3.202 |
 | bathrooms | 3.039 |
 | total_price_vnd | 2.519 |
 | amenity | 2.145 |
-| city | 1.795 |
 | legal_status | 1.714 |
+| project | 1.539 |
+| city | 1.366 |
 | district | 907 |
-| project | 862 |
 | price_per_m2_vnd | 249 |
-| building | 26 |
+| building | 124 |
 
 **Node theo loại**
 
 | Giá trị | Số lượng |
 |---|---:|
-| UnitType | 542 |
-| Project | 347 |
-| Ward | 129 |
-| District | 31 |
-| Building | 24 |
+| UnitType | 958 |
+| Project | 617 |
+| Ward | 238 |
+| Building | 56 |
+| District | 43 |
 | City | 16 |
 | Amenity | 13 |
 
@@ -110,31 +110,31 @@
 
 | Giá trị | Số lượng |
 |---|---:|
-| LOCATED_IN | 579 |
-| HAS_UNIT_TYPE | 566 |
-| HAS_AMENITY | 366 |
-| PART_OF | 24 |
+| HAS_UNIT_TYPE | 1.016 |
+| LOCATED_IN | 941 |
+| HAS_AMENITY | 640 |
+| PART_OF | 56 |
 
 **Dự án nhiều tin nhất**
 
 | Dự án | Slug | Số tin |
 |---|---|---:|
 | Vinhomes Central Park | `vinhomes-central-park` | 21 |
+| S Light Tower | `s-light-tower` | 19 |
+| Central Lakeside | `central-lakeside` | 16 |
 | Sun Urban City | `sun-urban-city` | 15 |
 | Mizuki Park | `mizuki-park` | 14 |
 | Vinhomes Ocean Park | `vinhomes-ocean-park` | 13 |
-| Noble Palace Tay Thang Long | `noble-palace-tay-thang-long` | 11 |
-| The Beverly Vinhomes Grand Park | `the-beverly-vinhomes-grand-park` | 11 |
-| Thanh Xuan Valley | `thanh-xuan-valley` | 10 |
-| Akari City Nam Long | `akari-city-nam-long` | 9 |
-| Imperia Sky Park | `imperia-sky-park` | 9 |
-| Khu Do Thi Nam Thang Long Ciputra | `khu-do-thi-nam-thang-long-ciputra` | 9 |
+| Green Skyline | `green-skyline` | 12 |
+| Sunshine City | `sunshine-city` | 12 |
+| Victoria Village | `victoria-village` | 12 |
+| Noble Palace Tây Thăng Long | `noble-palace-tay-thang-long` | 11 |
 
 ## 6. Lần chạy pipeline gần nhất
 
-- Job `ee128573870540fc9b3f4539b698b1b7` — trạng thái **done**
+- Job `8845c78f7fc04d45aa3a371c047bc37c` — trạng thái **done**
 - Đọc 4.795 tin: thêm 4.794 · giữ nguyên 0 · cập nhật 0 · quarantine 1
-- Chi tiết D3–D5: `{'clusters': 4750, 'duplicates': 44, 'facts_inserted': 30820, 'facts_deleted': 0, 'entities': 1102, 'entities_inserted': 1102, 'entities_deleted': 0, 'edges': 1535, 'edges_inserted': 1535, 'edges_deleted': 0}`
+- Chi tiết D3–D5: `{'clusters': 4750, 'duplicates': 44, 'facts_inserted': 31167, 'facts_deleted': 0, 'entities': 1941, 'entities_inserted': 1941, 'entities_deleted': 0, 'edges': 2653, 'edges_inserted': 2653, 'edges_deleted': 0}`
 
 _Tỷ lệ tin sạch trên raw: 100.0%_
 _Tỷ lệ đại diện cụm (sau dedup): 99.1%_
