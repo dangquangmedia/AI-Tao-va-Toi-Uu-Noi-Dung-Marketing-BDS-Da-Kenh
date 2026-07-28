@@ -4,7 +4,7 @@
 
 **Dự án:** AI tạo và tối ưu nội dung marketing BĐS đa kênh
 **Cập nhật gần nhất:** 28/07/2026
-**Trạng thái tổng thể:** Tuần 1 + Tuần 2 đã merge vào `main`; **Tuần 3 hoàn tất** trên branch `tuan-03-knowledge-base` — knowledge base 9.656 chunk đã embed bằng **BAAI/bge-m3 chạy trên GPU**, FTS tiếng Việt + pgvector HNSW, entity resolution nâng lên 617 dự án, `dataset_v1` đóng băng với leakage audit **đạt**, 72 gold query, 1.500 mẫu SFT nháp, R1/R2 chạy thật (R1-vector precision@10 = 0,850 · R2-graph recall = 0,862), 80/80 tests pass. Còn thiếu duy nhất staging URL (chờ tài khoản cloud).
+**Trạng thái tổng thể:** Tuần 1 + Tuần 2 đã merge vào `main`; **Tuần 3 hoàn tất** trên branch `tuan-03-knowledge-base` — knowledge base 9.656 chunk đã embed bằng **BAAI/bge-m3 chạy trên GPU**, FTS tiếng Việt + pgvector HNSW, entity resolution nâng lên 617 dự án, `dataset_v1` đóng băng với leakage audit **đạt**, 72 gold query, 1.500 mẫu SFT nháp, R1/R2 chạy thật (R1-vector precision@10 = 0,850 · R2-graph recall = 0,862), 81/81 tests pass. Còn thiếu duy nhất staging URL (chờ tài khoản cloud).
 
 ---
 
@@ -86,7 +86,7 @@ Nếu trễ, cắt theo thứ tự: DPO → ablation D+V+R → video/đa ngôn n
 | 27/07/2026 | **Tuần 2 — D1–D5 + graph** | Migration `8032b6027123`; 56/56 tests; 4.795 tin qua pipeline → 4.794 clean · 30.820 facts · 1.102 node · 1.535 cạnh · 1 quarantine | Chạy lại: `inserted=0 unchanged=4794`, facts/node/cạnh +0 → idempotent |
 | 27/07/2026 | Gate query graph | `GET /api/graph/projects/sunshine-sky-city/paths` → `Sunshine Sky City → Tòa V8 → apartment-2pn` kèm URL nguồn | Đạt gate "query path Project → Building → UnitType" |
 | 27/07/2026 | Báo cáo chất lượng dữ liệu | `docs/checkpoints/week_02_data_quality.md` sinh bằng `pipeline_cli --report` | Giá 31,6% → 52,5%; dự án 347; phường/xã 99,9% |
-| 28/07/2026 | **Tuần 3 — knowledge base + dataset_v1** | Migration `4982a1adb98d` + `a7aad62eeea9`; 80/80 tests; 9.656 chunk embed bằng bge-m3 trên GPU (8,8 phút) | Index idempotent; FTS + pgvector HNSW chạy thật |
+| 28/07/2026 | **Tuần 3 — knowledge base + dataset_v1** | Migration `4982a1adb98d` + `a7aad62eeea9`; 81/81 tests; 9.656 chunk embed bằng bge-m3 trên GPU (8,8 phút) | Index idempotent; FTS + pgvector HNSW chạy thật |
 | 28/07/2026 | Entity resolution bằng từ điển phường | `app/services/alias.py` | Dự án 347 → **617**; tin Tier A 862 → **1.539**; tên dự án có dấu |
 | 28/07/2026 | Đóng băng `dataset_v1` | `docs/checkpoints/week_03_data_card.md` | Split 69,3/14,7/16,0 theo đơn vị; **leakage audit đạt (0 rò rỉ)**; 72 gold query; 1.500 mẫu SFT nháp |
 | 28/07/2026 | Đánh giá retrieval R1/R2 | `docs/checkpoints/week_03_retrieval_eval.md` | R1-vector precision@10 **0,850** · MRR 0,921; R2-graph recall **0,862**; R1-fts chỉ 0,087 và RRF không trọng số kém hơn vector → cần BM25 + RRF có trọng số ở Tuần 4 |
@@ -107,9 +107,13 @@ Nếu trễ, cắt theo thứ tự: DPO → ablation D+V+R → video/đa ngôn n
 
 ## Current State & Hand-off
 
-- 27/07/2026: xong Tuần 1 (đã merge vào `main`) và Tuần 2 (branch `tuan-02-lam-sach-graph`).
-- Code hiện có: `backend/` (FastAPI + SQLAlchemy + Alembic; auth/RBAC/tenant, ingestion raw, pipeline D1–D5, facts, graph traversal ≤2 hop, data-quality API) · `frontend/` (Next.js 15: login, `/projects`, `/data`, `/graph`).
-- Dữ liệu: 4.795 tin trong raw zone, 4.794 tin đã làm sạch, 30.820 facts có provenance, graph 1.102 node / 1.535 cạnh trên PostgreSQL local (`docker compose up -d`).
-- Lệnh hay dùng: `python -m app.pipeline_cli --report ..\docs\checkpoints\week_02_data_quality.md` (chạy D1–D5 + xuất báo cáo), thêm `--rebuild` khi đổi luật parser.
-- Môi trường: backend cổng **8001** (cổng 8000 bị `latcat.exe` chiếm), frontend 3000, tài khoản demo `admin@cancu.demo` / `cancu123`.
-- Việc đầu tiên phiên tới: Tuần 3 theo `Plan/01` §6 — embedding + FTS index + alias/entity resolution + split `dataset_v1`.
+- 28/07/2026: xong Tuần 1, 2, 3 — cả ba đã merge vào `main` (commit gần nhất `fd5ff3e`), đã push GitHub.
+- Code hiện có: `backend/` (FastAPI + SQLAlchemy + Alembic; auth/RBAC/tenant, ingestion raw, pipeline D1–D5, facts + graph ≤2 hop, chunking/FTS/embedding, retrieval R1–R2, dataset split + gold query + SFT builder, fact editor API) · `frontend/` (Next.js 15: login, `/projects`, `/data`, `/graph`, `/search`, `/dataset`).
+- Dữ liệu trên PostgreSQL local (`docker compose up -d`): 4.795 tin raw · 4.794 tin sạch · 31.167 facts · graph 1.941 node / 2.653 cạnh · 9.656 chunk đã embed bằng `BAAI/bge-m3` · `dataset_v1` đã đóng băng · 72 gold query · 1.500 mẫu SFT nháp.
+- Lệnh hay dùng (chạy trong `backend/`):
+  - `python -m app.pipeline_cli --rebuild --report ..\docs\checkpoints\week_02_data_quality.md` — chạy lại D1–D5 khi đổi luật parser
+  - `python -m app.index_cli` — chunk + FTS + embed bge-m3 trên GPU (~9 phút cho 9.656 chunk)
+  - `python -m app.dataset_cli --build --eval` — split + gold query + SFT + data card + bảng đánh giá retrieval
+  - Máy không GPU: thêm `--backend hashing` (chỉ để pipeline chạy, **không dùng cho số liệu báo cáo**)
+- Môi trường: backend cổng **8001** (cổng 8000 bị `latcat.exe` chiếm), frontend 3000, tài khoản demo `admin@cancu.demo` / `cancu123`. GPU: GTX 1650 Ti 4GB, torch 2.6.0+cu124, CUDA hoạt động.
+- Việc đầu tiên phiên tới: Tuần 4 theo `Plan/01` §6 — R3 (RRF có trọng số) + BM25 tiếng Việt + query router + Content Studio 4 kênh; xem mục 5 ở trên.
