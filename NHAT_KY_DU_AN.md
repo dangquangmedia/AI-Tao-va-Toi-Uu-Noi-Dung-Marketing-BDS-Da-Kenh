@@ -4,7 +4,7 @@
 
 **Dự án:** AI tạo và tối ưu nội dung marketing BĐS đa kênh
 **Cập nhật gần nhất:** 28/07/2026
-**Trạng thái tổng thể:** Tuần 1 + Tuần 2 đã merge vào `main`; **Tuần 3 hoàn tất** trên branch `tuan-03-knowledge-base` — knowledge base 9.656 chunk đã embed bằng **BAAI/bge-m3 chạy trên GPU**, FTS tiếng Việt + pgvector HNSW, entity resolution nâng lên 617 dự án, `dataset_v1` đóng băng với leakage audit **đạt**, 72 gold query, 1.500 mẫu SFT nháp, R1/R2 chạy thật (R1-vector precision@10 = 0,850 · R2-graph recall = 0,862), 81/81 tests pass. Còn thiếu duy nhất staging URL (chờ tài khoản cloud).
+**Trạng thái tổng thể:** Tuần 1, 2, 3 đều đã merge vào `main` (mới nhất `e79f486`); **Tuần 3 hoàn tất** — knowledge base 9.656 chunk đã embed bằng **BAAI/bge-m3 chạy trên GPU**, FTS tiếng Việt + pgvector HNSW, entity resolution nâng lên 617 dự án, `dataset_v1` đóng băng với leakage audit **đạt**, 72 gold query, 1.500 mẫu SFT nháp, R1/R2 chạy thật (R1-vector precision@10 = 0,850 · R2-graph recall = 0,862), 81/81 tests pass. Còn thiếu duy nhất staging URL (chờ tài khoản cloud).
 
 ---
 
@@ -52,8 +52,8 @@
 ## 5. Việc cần làm tiếp theo (đầu Tuần 4)
 
 1. **Chọn nền tảng cloud + cấp tài khoản** → deploy staging (carry-over từ Tuần 1, vẫn chưa xong).
-2. **R3 = RRF có trọng số (R1 + R2)** + query router. Bằng chứng Tuần 3 cho thấy RRF trọng số bằng nhau làm giảm chất lượng (0,537 so với 0,847 của vector đơn thuần).
-3. Cải thiện nhánh lexical: BM25 có IDF + tách từ tiếng Việt (R1-fts hiện chỉ 0,086 precision).
+2. **R3 = RRF có trọng số (R1 + R2)** + query router. Bằng chứng Tuần 3 cho thấy RRF trọng số bằng nhau làm giảm chất lượng (0,551 so với 0,850 của vector đơn thuần).
+3. Cải thiện nhánh lexical: BM25 có IDF + tách từ tiếng Việt (R1-fts hiện chỉ 0,087 precision).
 4. Hải: soát tay 72 gold query rồi khóa benchmark; prompt baseline + chạy A/B.
 5. Content Studio 4 kênh + Evidence panel (dùng chunk + facts đã có provenance).
 6. Chốt danh sách human rater (theo `Plan/03` §5) — không để trễ tới Tuần 6.
