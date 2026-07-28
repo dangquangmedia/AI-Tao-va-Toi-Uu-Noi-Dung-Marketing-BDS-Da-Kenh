@@ -4,10 +4,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+from app.core.config import settings
 from app.core.security import hash_password
 from app.db import Base, get_db
 from app.main import app
 from app.models import Tenant, User
+
+# Test không tải model thật: dùng embedder băm tất định (xem services/embeddings.py).
+# Số liệu thí nghiệm luôn chạy bằng model thật qua CLI, không lấy từ test.
+settings.embedding_backend = "hashing"
 
 # Tests API dùng SQLite in-memory cho tốc độ và độc lập với Docker;
 # E2E trên Postgres thật được chạy riêng (xem docs/checkpoints/week_01_report.md).

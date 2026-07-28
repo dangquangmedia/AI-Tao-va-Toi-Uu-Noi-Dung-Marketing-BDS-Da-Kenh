@@ -89,6 +89,7 @@ class CleanListingOut(BaseModel):
     parser_version: str
     property_type: str
     project_slug: str | None
+    project_name: str | None
     project_confidence: float
     building_code: str | None
     unit_type_key: str | None
@@ -130,5 +131,35 @@ class FactOut(BaseModel):
     evidence: str
     valid_from: str
     valid_to: str
+    review_note: str
+    original_value_text: str
+
+    model_config = {"from_attributes": True}
+
+
+class IndexRunIn(BaseModel):
+    tiers: list[str] = Field(default=["A", "B"], description="Tier dữ liệu đưa vào index")
+    limit: int | None = Field(default=None, ge=1)
+    embed: bool = True
+    backend: str | None = Field(default=None, description="Ghi đè embedding backend cho lần chạy này")
+
+
+class FactReviewIn(BaseModel):
+    value_text: str | None = None
+    needs_review: bool = False
+    note: str | None = None
+
+
+class RetrievalQueryOut(BaseModel):
+    id: str
+    dataset_version: str
+    query_type: str
+    question: str
+    split: str
+    project_slug: str | None
+    expected_listing_ids: list
+    expected_entities: list
+    generator: str
+    needs_review: bool
 
     model_config = {"from_attributes": True}

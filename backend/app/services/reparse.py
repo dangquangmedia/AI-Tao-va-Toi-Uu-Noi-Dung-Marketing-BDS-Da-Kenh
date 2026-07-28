@@ -397,9 +397,11 @@ def extract_location(text: str) -> dict:
     city = None
     position = len(flat) + 1
     for alias, name in CITY_ALIASES.items():
-        idx = flat.find(alias)
-        if 0 <= idx < position:
-            position, city = idx, name
+        # Bắt buộc khớp trọn từ: "hue" không được khớp trong "cho thue",
+        # "hcm" không được khớp trong một chuỗi ký tự dài hơn.
+        found = re.search(rf"(?<![a-z0-9]){re.escape(alias)}(?![a-z0-9])", flat)
+        if found and found.start() < position:
+            position, city = found.start(), name
     return {"district": district, "city": city}
 
 
@@ -440,7 +442,7 @@ def reparse_record(raw: dict, canonical_url: str) -> dict:
     amenities = extract_amenities(text)
     bedrooms = raw.get("bedrooms")
     property_type = raw.get("property_type") or ""
-    building = extract_building_code(text) if slug else None
+    building = extract_building_code(text)
 
     if location["district"] or location["city"]:
         location_flag = "from_text"
@@ -460,6 +462,7 @@ def reparse_record(raw: dict, canonical_url: str) -> dict:
         "parser_version": PARSER_VERSION,
         "property_type": property_type,
         "project_slug": slug,
+        "project_name": None,  # tên có dấu do entity resolution điền (services/alias.py)
         "project_confidence": project_confidence(slug, text) if slug else 0.0,
         "building_code": building,
         "unit_type_key": unit_type_key(property_type, bedrooms),

@@ -20,6 +20,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models import (
+    Chunk,
     CleanListing,
     Fact,
     GraphEdge,
@@ -28,8 +29,16 @@ from app.models import (
     QuarantineRecord,
     SourceListing,
 )
+from app.services.alias import apply_resolution, build_ward_dictionary, resolve_project
 from app.services.dedup import build_clusters, simhash
-from app.services.reparse import PARSER_VERSION, deaccent, reparse_record, slug_to_name
+from app.services.reparse import (
+    PARSER_VERSION,
+    assign_tier,
+    deaccent,
+    extract_project_slug,
+    reparse_record,
+    slug_to_name,
+)
 
 JOB_TYPE = "clean_pipeline"
 
@@ -38,6 +47,7 @@ _CLEAN_FIELDS = (
     "parser_version",
     "property_type",
     "project_slug",
+    "project_name",
     "project_confidence",
     "building_code",
     "unit_type_key",
@@ -126,8 +136,13 @@ def _build_facts(clean: dict, source: SourceListing) -> list[dict]:
 
     if clean["project_slug"]:
         confidence = clean["project_confidence"]
-        add("project", clean["project_slug"], confidence=confidence,
-            evidence=f"canonical_url:{source.canonical_url}", review=confidence < 0.7)
+        evidence = (
+            f"{clean['project_name']} · {source.canonical_url}"
+            if clean.get("project_name")
+            else f"canonical_url:{source.canonical_url}"
+        )
+        add("project", clean["project_slug"], confidence=confidence, evidence=evidence,
+            review=confidence < 0.7)
     if clean["building_code"]:
         add("building", clean["building_code"], confidence=0.7,
             evidence=clean["title_clean"][:200], review=True)
@@ -161,9 +176,11 @@ def _rebuild_graph(db: Session, tenant_id: str) -> dict:
     def add_entity(entity_type: str, key: str, name: str, attributes: dict | None = None):
         node = entities.setdefault(
             (entity_type, key),
-            {"name": name, "attributes": attributes or {}, "support": 0},
+            {"name": name, "attributes": attributes or {}, "support": 0, "names": {}},
         )
         node["support"] += 1
+        # Tên có dấu xuất hiện nhiều nhất làm tên chính, phần còn lại thành alias
+        node["names"][name] = node["names"].get(name, 0) + 1
         return (entity_type, key)
 
     def add_edge(src, dst, edge_type, row):
@@ -183,8 +200,12 @@ def _rebuild_graph(db: Session, tenant_id: str) -> dict:
     for row in rows:
         if not row.project_slug:
             continue  # graph dựng trên Tier A (tin gắn được dự án) — Plan/02 §5
-        project = add_entity("Project", row.project_slug, slug_to_name(row.project_slug),
-                             {"property_type": row.property_type})
+        project = add_entity(
+            "Project",
+            row.project_slug,
+            row.project_name or slug_to_name(row.project_slug),
+            {"property_type": row.property_type},
+        )
         building = None
         if row.building_code:
             building = add_entity(
@@ -235,13 +256,17 @@ def _rebuild_graph(db: Session, tenant_id: str) -> dict:
     id_by_key: dict[tuple[str, str], str] = {}
     entities_inserted = 0
     for key, data in entities.items():
+        ranked = sorted(data["names"].items(), key=lambda kv: (-kv[1], kv[0]))
+        name = ranked[0][0]
+        aliases = [alias for alias, _ in ranked[1:]]
         row = existing_entities.get(key)
         if row is None:
             row = GraphEntity(
                 tenant_id=tenant_id,
                 entity_type=key[0],
                 canonical_key=key[1],
-                name=data["name"],
+                name=name,
+                aliases=aliases,
                 attributes=data["attributes"],
                 support_count=data["support"],
             )
@@ -249,7 +274,8 @@ def _rebuild_graph(db: Session, tenant_id: str) -> dict:
             db.flush()
             entities_inserted += 1
         else:
-            row.name = data["name"]
+            row.name = name
+            row.aliases = aliases
             row.attributes = data["attributes"]
             row.support_count = data["support"]
         id_by_key[key] = row.id
@@ -314,7 +340,8 @@ def reset_derived_data(db: Session, tenant_id: str) -> dict:
     với `PARSER_VERSION` hiện hành (yêu cầu tái lập của Plan/02 §4).
     """
     counts = {}
-    for model in (GraphEdge, GraphEntity, Fact, CleanListing):
+    # Chunk phải xóa trước CleanListing (khóa ngoại), rồi mới đến graph/facts
+    for model in (Chunk, GraphEdge, GraphEntity, Fact, CleanListing):
         result = db.execute(delete(model).where(model.tenant_id == tenant_id))
         counts[model.__tablename__] = result.rowcount
     db.commit()
@@ -369,6 +396,9 @@ def run_clean_pipeline(
         query = query.limit(limit)
     sources = db.scalars(query).all()
 
+    # Từ điển tên phường học từ chính batch này → dùng cho entity resolution pha 2
+    wards = build_ward_dictionary(source.canonical_url for source in sources)
+
     existing_clean = {
         c.source_row_id: c
         for c in db.scalars(select(CleanListing).where(CleanListing.tenant_id == tenant_id)).all()
@@ -380,6 +410,13 @@ def run_clean_pipeline(
     for source in sources:
         job.total_read += 1
         clean = reparse_record(source.raw, source.canonical_url)
+        resolution = resolve_project(
+            source.canonical_url,
+            f"{clean['title_clean']}\n{clean['description_clean']}",
+            clean["project_slug"],
+            wards,
+        )
+        clean = apply_resolution(clean, resolution, assign_tier)
 
         # Contract v1: phải có nội dung text và tối thiểu project hoặc location
         if not clean["title_clean"] and not clean["description_clean"]:

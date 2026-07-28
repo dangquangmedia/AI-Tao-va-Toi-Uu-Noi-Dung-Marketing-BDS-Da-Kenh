@@ -9,6 +9,8 @@ const LINKS = [
   { href: "/projects", label: "Dự án" },
   { href: "/data", label: "Dữ liệu" },
   { href: "/graph", label: "Tri thức" },
+  { href: "/search", label: "Truy xuất" },
+  { href: "/dataset", label: "Dataset" },
 ];
 
 export default function TopBar({ me }: { me: Me }) {
