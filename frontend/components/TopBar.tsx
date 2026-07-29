@@ -13,6 +13,7 @@ const LINKS = [
   { href: "/studio", label: "Studio" },
   { href: "/review", label: "Duyệt" },
   { href: "/dataset", label: "Dataset" },
+  { href: "/experiments", label: "Thí nghiệm" },
 ];
 
 export default function TopBar({ me }: { me: Me }) {

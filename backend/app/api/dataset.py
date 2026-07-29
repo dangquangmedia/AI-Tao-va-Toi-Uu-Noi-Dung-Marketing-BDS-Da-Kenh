@@ -28,14 +28,20 @@ def summary(
         )
     ).all()
     by_type: dict[str, int] = {}
+    by_difficulty: dict[str, int] = {}
     for query in queries:
         by_type[query.query_type] = by_type.get(query.query_type, 0) + 1
+        by_difficulty[query.difficulty] = by_difficulty.get(query.difficulty, 0) + 1
     return {
         "dataset_version": version,
         "splits": split_report(db, user.tenant_id, version),
         "leakage": leakage_audit(db, user.tenant_id, version),
-        "gold_queries": {"total": len(queries), "by_type": by_type,
-                         "needs_review": sum(1 for q in queries if q.needs_review)},
+        "gold_queries": {
+            "total": len(queries),
+            "by_type": by_type,
+            "by_difficulty": by_difficulty,
+            "needs_review": sum(1 for q in queries if q.needs_review),
+        },
     }
 
 
@@ -43,6 +49,7 @@ def summary(
 def list_queries(
     version: str | None = None,
     query_type: str | None = None,
+    difficulty: str | None = None,
     limit: int = Query(default=50, ge=1, le=200),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
@@ -53,6 +60,8 @@ def list_queries(
     )
     if query_type:
         stmt = stmt.where(RetrievalQuery.query_type == query_type)
+    if difficulty:  # tách bộ hard ra để Hải soát riêng — hai bộ có tiêu chí khác nhau
+        stmt = stmt.where(RetrievalQuery.difficulty == difficulty)
     return db.scalars(stmt.order_by(RetrievalQuery.query_type, RetrievalQuery.query_key).limit(limit)).all()
 
 

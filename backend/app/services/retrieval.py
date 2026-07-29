@@ -230,6 +230,7 @@ def retrieve_r3(
         if use_router
         else {
             "intent": "general",
+            "mode": "fixed",
             "weights": dict(DEFAULT_WEIGHTS),
             "project_slug": None,
             "allowed_projects": [],

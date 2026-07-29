@@ -11,7 +11,6 @@ Chạy:
 
 import argparse
 import statistics
-from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,46 +18,9 @@ from sqlalchemy import func, select
 
 from app.core.config import settings
 from app.db import SessionLocal
-from app.models import CleanListing, Tenant, User
-from app.services.dataset import split_of_listing
+from app.models import Tenant, User
+from app.services.experiments import PERSONAS, pick_briefs  # noqa: F401 — giữ tên cũ cho script ngoài
 from app.services.generation import run_generation
-from app.services.prompts import CHANNEL_SPECS
-
-PERSONAS = ("young_family", "investor", "first_home")
-
-
-def pick_briefs(db, tenant_id: str, dataset_version: str, n: int) -> list[dict]:
-    """Chọn brief tất định: dự án test có nhiều tin nhất, xoay vòng kênh × persona."""
-    listing_split = split_of_listing(db, tenant_id, dataset_version)
-    rows = db.scalars(
-        select(CleanListing).where(
-            CleanListing.tenant_id == tenant_id, CleanListing.project_slug.is_not(None)
-        )
-    ).all()
-
-    by_project: dict[str, list[CleanListing]] = defaultdict(list)
-    for row in rows:
-        if listing_split.get(row.id) == "test":
-            by_project[row.project_slug].append(row)
-
-    ranked = sorted(by_project.items(), key=lambda kv: (-len(kv[1]), kv[0]))[:n]
-    channels = list(CHANNEL_SPECS)
-    briefs = []
-    for i, (slug, members) in enumerate(ranked):
-        name = next((m.project_name for m in members if m.project_name), slug)
-        bedrooms = next((m.bedrooms for m in members if m.bedrooms), None)
-        briefs.append(
-            {
-                "project_slug": slug,
-                "channel": channels[i % len(channels)],
-                "persona": PERSONAS[i % len(PERSONAS)],
-                "brief": (
-                    f"Giới thiệu {'căn ' + str(bedrooms) + ' phòng ngủ' if bedrooms else 'bất động sản'} "
-                    f"tại dự án {name}"
-                ),
-            }
-        )
-    return briefs
 
 
 def summarize(records: list) -> dict:

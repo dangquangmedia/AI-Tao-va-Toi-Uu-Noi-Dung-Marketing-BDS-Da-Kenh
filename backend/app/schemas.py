@@ -154,10 +154,12 @@ class RetrievalQueryOut(BaseModel):
     id: str
     dataset_version: str
     query_type: str
+    difficulty: str
     question: str
     split: str
     project_slug: str | None
     expected_listing_ids: list
+    expected_projects: list
     expected_entities: list
     generator: str
     needs_review: bool

@@ -8,6 +8,7 @@ from app.api import (
     auth,
     content,
     dataset,
+    experiments,
     generation,
     graph,
     ingestion,
@@ -49,6 +50,7 @@ app.include_router(generation.router)
 app.include_router(content.router)
 app.include_router(search.router)
 app.include_router(dataset.router)
+app.include_router(experiments.router)
 
 
 @app.get("/api/health")

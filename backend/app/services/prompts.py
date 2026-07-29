@@ -15,7 +15,7 @@ PROMPT_VERSION = "prompt_v1"
 CHANNEL_SPECS = {
     "description": {
         "label": "mô tả bất động sản",
-        "length": "180–260 từ",
+        "words": (180, 260),
         "rules": [
             "Mở đầu bằng vị trí và loại hình",
             "Nêu diện tích, số phòng, mức giá nếu có trong dữ kiện",
@@ -24,17 +24,17 @@ CHANNEL_SPECS = {
     },
     "facebook": {
         "label": "bài đăng Facebook",
-        "length": "80–140 từ",
+        "words": (80, 140),
         "rules": ["Chia dòng ngắn dễ đọc", "Tối đa 5 emoji", "Kết bằng 3–5 hashtag"],
     },
     "email": {
         "label": "email chăm sóc khách hàng",
-        "length": "120–200 từ",
+        "words": (120, 200),
         "rules": ["Có dòng tiêu đề email", "Xưng hô lịch sự", "Chỉ một lời kêu gọi hành động"],
     },
     "landing_seo": {
         "label": "nội dung landing page chuẩn SEO",
-        "length": "250–400 từ",
+        "words": (250, 400),
         "rules": [
             "Có tiêu đề H1 và ít nhất hai mục H2",
             "Đưa từ khóa chính vào 100 từ đầu",
@@ -42,6 +42,12 @@ CHANNEL_SPECS = {
         ],
     },
 }
+
+# Chuỗi hiển thị suy ra từ khoảng số, không viết tay hai chỗ: chỉ số "đúng độ dài" của
+# Tuần 6 phải đo trên **đúng con số đã yêu cầu trong prompt**. Chuỗi sinh ra trùng khít
+# bản viết tay trước đó nên `prompt_hash` của các lần chạy cũ không đổi.
+for _spec in CHANNEL_SPECS.values():
+    _spec["length"] = f"{_spec['words'][0]}–{_spec['words'][1]} từ"
 
 PERSONA_SPECS = {
     "young_family": "gia đình trẻ, quan tâm trường học, an ninh, không gian sinh hoạt",

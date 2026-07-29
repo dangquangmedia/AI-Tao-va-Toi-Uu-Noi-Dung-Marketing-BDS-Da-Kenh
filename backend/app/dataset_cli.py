@@ -18,7 +18,7 @@ from app.services import data_card
 from app.services.dataset import build_dataset_split, leakage_audit
 from app.services.gold_queries import generate_gold_queries
 from app.services.retrieval import retrieval_stats
-from app.services.retrieval_eval import evaluate, render_markdown, sweep_weights
+from app.services.retrieval_eval import DISCOVERY_GRID, evaluate, render_markdown, sweep_weights
 from app.services.sft_builder import build_sft_draft
 
 
@@ -29,6 +29,11 @@ def main() -> None:
     parser.add_argument("--build", action="store_true")
     parser.add_argument("--eval", action="store_true")
     parser.add_argument("--sweep", action="store_true", help="quét trọng số RRF của R3")
+    parser.add_argument(
+        "--sweep-hard",
+        action="store_true",
+        help="quét trọng số cho câu hỏi mô tả (bộ hard) — cơ sở chốt chế độ discovery",
+    )
     parser.add_argument("--k", type=int, default=10)
     parser.add_argument("--backend", default=None, help="ghi đè embedding_backend khi đánh giá")
     parser.add_argument("--card", default="../docs/checkpoints/week_03_data_card.md")
@@ -75,10 +80,18 @@ def main() -> None:
             stats = retrieval_stats(db, tenant.id)
             print(f"Knowledge base: {stats}")
             sweep = sweep_weights(db, tenant.id, args.version, k=args.k) if args.sweep else None
-            if sweep:
-                for row in sweep:
+            sweep_hard = (
+                sweep_weights(
+                    db, tenant.id, args.version, k=args.k, grid=DISCOVERY_GRID, difficulty="hard"
+                )
+                if args.sweep_hard
+                else None
+            )
+            for label, rows in (("sweep", sweep), ("sweep-hard", sweep_hard)):
+                for row in rows or []:
                     print(
-                        f"  sweep {row['weights']} precision={row['project_precision']:.3f} "
+                        f"  {label} {row['weights']} precision={row['project_precision']:.3f} "
+                        f"list_prec={row['listing_precision']:.3f} "
                         f"recall={row['listing_recall']:.3f} mrr={row['mrr']:.3f}"
                     )
             report = evaluate(db, tenant.id, args.version, k=args.k)
@@ -86,15 +99,26 @@ def main() -> None:
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text(
                 render_markdown(
-                    report, stats["embedding_model"] or settings.embedding_model, args.version, sweep
+                    report,
+                    stats["embedding_model"] or settings.embedding_model,
+                    args.version,
+                    sweep,
+                    sweep_hard,
                 ),
                 encoding="utf-8",
             )
             for config, data in report.get("configs", {}).items():
                 o = data["overall"]
+                # In kèm cột theo độ khó: bộ standard nêu tên dự án nên số của nó luôn đẹp,
+                # nhìn riêng bộ hard mới biết hệ thống tìm kiếm thật sự tốt đến đâu.
+                by_diff = " ".join(
+                    f"{name}(p={d['project_precision']:.3f},r={d['listing_recall']:.3f})"
+                    for name, d in sorted(data.get("by_difficulty", {}).items())
+                )
                 print(
                     f"  {config:<12} precision={o['project_precision']:.3f} "
-                    f"recall={o['listing_recall']:.3f} hit={o['hit']:.3f} mrr={o['mrr']:.3f}"
+                    f"recall={o['listing_recall']:.3f} hit={o['hit']:.3f} mrr={o['mrr']:.3f} "
+                    f"| {by_diff}"
                 )
             print(f"Báo cáo đánh giá: {out}")
     finally:
