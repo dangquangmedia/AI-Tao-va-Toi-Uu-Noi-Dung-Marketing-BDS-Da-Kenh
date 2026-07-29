@@ -230,15 +230,15 @@ Nếu trễ, cắt theo thứ tự: DPO → ablation D+V+R → video/đa ngôn n
 
 ## Current State & Hand-off
 
-- 29/07/2026: xong Tuần 1–5 (Tuần 5 trừ phần cần GPU), tất cả đã ở `main`.
-- Code hiện có: `backend/` (FastAPI + SQLAlchemy + Alembic; auth/RBAC/tenant, ingestion raw, pipeline D1–D5, facts + graph ≤2 hop, chunking/FTS/embedding, **BM25 tự cài**, retrieval R1–R3 + query router, dataset split + gold query + SFT builder + **SFT export sẵn sàng train**, model gateway + prompt có version + claim check + logging generations, **adapter registry + cấu hình C/D**, **vòng duyệt nội dung**) · `frontend/` (Next.js 15: login, `/projects`, `/data`, `/graph`, `/search`, `/studio`, `/review`, `/dataset`) · `training/` (gói QLoRA độc lập cho máy GPU).
+- 29/07/2026: xong Tuần 1–6 (còn khuyết cấu hình C/D vì chưa có adapter), tất cả đã ở `main` — merge `6bd785d`.
+- Code hiện có: `backend/` (FastAPI + SQLAlchemy + Alembic; auth/RBAC/tenant, ingestion raw, pipeline D1–D5, facts + graph ≤2 hop, chunking/FTS/embedding, **BM25 tự cài**, retrieval R1–R3 + query router **hai chế độ**, dataset split + gold query **standard/hard** + SFT builder + **SFT export sẵn sàng train**, model gateway + prompt có version + claim check + logging generations, **adapter registry + cấu hình C/D**, **vòng duyệt nội dung**, **thí nghiệm đóng băng có snapshot + kiểm định thống kê**) · `frontend/` (Next.js 15: login, `/projects`, `/data`, `/graph`, `/search`, `/studio`, `/review`, `/dataset`, `/experiments`) · `training/` (gói QLoRA độc lập cho máy GPU).
 - Dữ liệu trên PostgreSQL local (`docker compose up -d`): 4.795 tin raw · 4.794 tin sạch · 31.167 facts · graph 1.941 node / 2.653 cạnh · 9.656 chunk đã embed bằng `BAAI/bge-m3` · `dataset_v1` đã đóng băng · **108 gold query** (72 standard + 36 hard) · 1.500 mẫu SFT nháp · 50 bản ghi `generations` · **1 lượt `experiment_runs`** (`week6_frozen_ab`, 12 brief × A/B) · **0 nội dung trong vòng duyệt** (dữ liệu thử E2E đã xóa sạch sau khi kiểm).
 - Thư mục `backend/models/adapters/` đang **trống** (chỉ có README) — đó là lý do cấu hình C/D chưa có số. Trọng số adapter cố ý không đưa vào git.
 - Từ Tuần 6, mọi số thí nghiệm phải chạy qua `experiment_cli` chứ không phải `ab_cli`: nó ghi lại **snapshot** (commit git, model, prompt version, trọng số router, adapter fingerprint, kích thước split) vào bảng `experiment_runs`. Không có snapshot thì bảng số trong báo cáo không chứng minh được là chạy cùng điều kiện. `ab_cli` giữ lại để tái lập đúng số Tuần 4.
 - Lệnh hay dùng (chạy trong `backend/`):
   - `python -m app.pipeline_cli --rebuild --report ..\docs\checkpoints\week_02_data_quality.md` — chạy lại D1–D5 khi đổi luật parser
   - `python -m app.index_cli` — chunk + FTS + embed bge-m3 trên GPU (~9 phút cho 9.656 chunk)
-  - `python -m app.dataset_cli --build --eval --sweep` — split + gold query + SFT + data card + bảng R1–R3 + sweep trọng số
+  - `python -m app.dataset_cli --build --eval --sweep --sweep-hard` — split + gold query (kèm bộ hard) + SFT + data card + bảng R1–R3 + sweep trọng số cho cả hai chế độ router (~25 phút GPU)
   - `python -m app.experiment_cli --briefs 12 --configs A,B,C,D --model Qwen/Qwen2.5-1.5B-Instruct --fp16 --k 3 --max-new-tokens 200` — **thí nghiệm đóng băng có snapshot**; thiếu adapter thì C/D bị bỏ qua kèm lý do, A/B vẫn ra số
   - `python -m app.experiment_cli --list` — liệt kê các lượt đã chạy; xem chi tiết ở `/experiments`
   - `python -m app.ab_cli --briefs 4 --k 3 --max-new-tokens 200` — bản Tuần 4, giữ để tái lập số cũ
