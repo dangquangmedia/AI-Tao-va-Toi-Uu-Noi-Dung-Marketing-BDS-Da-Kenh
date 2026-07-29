@@ -4,7 +4,16 @@
 
 **Dự án:** AI tạo và tối ưu nội dung marketing BĐS đa kênh
 **Cập nhật gần nhất:** 29/07/2026 (chiều)
-**Trạng thái tổng thể:** Tuần 1–4 đã merge vào `main`; **Tuần 5 xong phần không cần GPU** — ma trận A–D đủ bốn ô (C/D chỉ chờ adapter cắm vào), vòng duyệt nội dung đầy đủ (`/review`), gói training bàn giao cho Hải chạy Colab/máy GPU, dataset SFT xuất được 237 mẫu chất lượng cao. Tuần 4 trước đó: RAG giảm tỷ lệ claim vô căn cứ **0,2042 → 0,0917 (−55%)**, tốt hơn ở cả 4/4 brief — BM25 tiếng Việt tự cài đưa nhánh lexical từ 0,090 lên 0,964 precision@10, R3 (RRF có trọng số + query router) đạt **precision 1,000 · recall 0,938 · MRR 1,000** trên 72 gold query; Content Studio 4 kênh + Evidence panel chạy thật với **Qwen2.5-3B-Instruct 4-bit trên GPU máy** (VRAM 2,1GB); mọi lần sinh được log đủ prompt hash/model/seed/context để tái lập. Nền tảng Tuần 3 giữ nguyên — knowledge base 9.656 chunk đã embed bằng **BAAI/bge-m3 chạy trên GPU**, FTS tiếng Việt + pgvector HNSW, entity resolution nâng lên 617 dự án, `dataset_v1` đóng băng với leakage audit **đạt**, 72 gold query, 1.500 mẫu SFT nháp, R1/R2 chạy thật (R1-vector precision@10 = 0,850 · R2-graph recall = 0,862), 81/81 tests pass. Còn thiếu duy nhất staging URL (chờ tài khoản cloud).
+**Trạng thái tổng thể:** Tuần 1–5 đã merge vào `main` (merge gần nhất `ebc6ce7`); **131/131 tests pass**.
+
+| Tuần | Kết quả đã có bằng chứng |
+|---|---|
+| 1–2 | Monorepo FastAPI+Next.js, auth/RBAC/tenant, pipeline D1–D5 idempotent, 4.794 tin sạch + 31.167 facts + graph ≤2 hop |
+| 3 | Knowledge base 9.656 chunk embed **bge-m3 trên GPU**, FTS tiếng Việt + pgvector HNSW, entity resolution 617 dự án, `dataset_v1` đóng băng (leakage audit **đạt**), 72 gold query |
+| 4 | **BM25 tiếng Việt tự cài**: nhánh lexical 0,090 → **0,964** precision@10; **R3-router 1,000 · recall 0,938 · MRR 1,000**; Content Studio + Evidence panel; baseline A/B: RAG giảm claim vô căn cứ **0,2042 → 0,0917 (−55%)**, thắng 4/4 brief (n = 4, chưa kiểm định thống kê) |
+| 5 | Ma trận **A–D đủ bốn ô** (C/D chỉ chờ adapter cắm vào — mục 5-0), **vòng duyệt nội dung** `/review` đầy đủ, gói training bàn giao Hải (`training/`), SFT export 237 mẫu đã lọc bằng claim checker |
+
+**Ba việc chặn tiến độ, đều cần quyết định ngoài code:** (1) Hải train adapter QLoRA đầu tiên, (2) staging URL chờ Anh cấp tài khoản cloud, (3) mô tả nguồn bị crawler cắt cụt (mục 5c).
 
 ---
 
@@ -190,7 +199,8 @@ Nếu trễ, cắt theo thứ tự: DPO → ablation D+V+R → video/đa ngôn n
 
 - 29/07/2026: xong Tuần 1–5 (Tuần 5 trừ phần cần GPU), tất cả đã ở `main`.
 - Code hiện có: `backend/` (FastAPI + SQLAlchemy + Alembic; auth/RBAC/tenant, ingestion raw, pipeline D1–D5, facts + graph ≤2 hop, chunking/FTS/embedding, **BM25 tự cài**, retrieval R1–R3 + query router, dataset split + gold query + SFT builder + **SFT export sẵn sàng train**, model gateway + prompt có version + claim check + logging generations, **adapter registry + cấu hình C/D**, **vòng duyệt nội dung**) · `frontend/` (Next.js 15: login, `/projects`, `/data`, `/graph`, `/search`, `/studio`, `/review`, `/dataset`) · `training/` (gói QLoRA độc lập cho máy GPU).
-- Dữ liệu trên PostgreSQL local (`docker compose up -d`): 4.795 tin raw · 4.794 tin sạch · 31.167 facts · graph 1.941 node / 2.653 cạnh · 9.656 chunk đã embed bằng `BAAI/bge-m3` · `dataset_v1` đã đóng băng · 72 gold query · 1.500 mẫu SFT nháp.
+- Dữ liệu trên PostgreSQL local (`docker compose up -d`): 4.795 tin raw · 4.794 tin sạch · 31.167 facts · graph 1.941 node / 2.653 cạnh · 9.656 chunk đã embed bằng `BAAI/bge-m3` · `dataset_v1` đã đóng băng · 72 gold query · 1.500 mẫu SFT nháp · 26 bản ghi `generations` (gồm baseline A/B thật) · **0 nội dung trong vòng duyệt** (dữ liệu thử E2E đã xóa sạch sau khi kiểm).
+- Thư mục `backend/models/adapters/` đang **trống** (chỉ có README) — đó là lý do cấu hình C/D chưa có số. Trọng số adapter cố ý không đưa vào git.
 - Lệnh hay dùng (chạy trong `backend/`):
   - `python -m app.pipeline_cli --rebuild --report ..\docs\checkpoints\week_02_data_quality.md` — chạy lại D1–D5 khi đổi luật parser
   - `python -m app.index_cli` — chunk + FTS + embed bge-m3 trên GPU (~9 phút cho 9.656 chunk)
