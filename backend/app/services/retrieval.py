@@ -1,13 +1,17 @@
-"""Truy xuất R1 (vector/FTS) và R2 (graph-only ≤2 hop) — Tuần 3, Plan/01 §5.2.
+"""Truy xuất R1 / R2 / R3 — Plan/01 §5.2 (R1–R2 từ Tuần 3, R3 + BM25 từ Tuần 4).
 
-- **R1** chạy trên `chunks`: FTS tiếng Việt (đã bỏ dấu) và/hoặc vector pgvector.
-  Chế độ `hybrid` hợp nhất hai danh sách bằng Reciprocal Rank Fusion.
-- **R2** không dùng text similarity: nhận diện thực thể trong câu hỏi, đi ≤2 hop trên
-  Property Knowledge Graph để ra tập dự án liên quan, rồi lấy chunk của các dự án đó.
+- **R1** chạy trên `chunks`, không dùng graph: BM25 tiếng Việt (`services/lexical.py`),
+  vector pgvector (bge-m3), hoặc `hybrid` = RRF có trọng số của hai nhánh.
+  Chế độ `fts` (tsvector thô) giữ lại làm mốc so sánh cho báo cáo, không dùng production.
+- **R2** không dùng so khớp văn bản: nhận diện thực thể trong câu hỏi, đi ≤2 hop trên
+  Property Knowledge Graph ra tập dự án liên quan rồi lấy chunk của các dự án đó.
   Kết quả kèm **đường đi** để giải thích được vì sao tin này được chọn.
+- **R3** (production): BM25 + vector + graph hợp nhất bằng **RRF có trọng số**, trọng số
+  do `services/query_router.py` quyết theo ý định câu hỏi. Trọng số mặc định chốt bằng
+  sweep trên 72 gold query (xem docs/checkpoints/week_04_retrieval_eval.md).
 
-R3 (hợp nhất R1+R2 bằng RRF) là cấu hình production, hoàn thiện ở Tuần 4 — hàm
-`reciprocal_rank_fusion` ở đây đã dùng chung để tuần sau không phải viết lại.
+Bài học Tuần 3 giữ lại trong thiết kế: RRF **trọng số bằng nhau** làm kết quả tệ hơn cả
+nhánh mạnh nhất khi có một nhánh yếu, nên mọi hàm hợp nhất ở đây đều nhận `weights`.
 """
 
 import re
@@ -18,10 +22,13 @@ from sqlalchemy.orm import Session
 from app.models import Chunk, GraphEntity
 from app.services.embeddings import cosine, get_embedder
 from app.services.graph import traverse
+from app.services.lexical import bm25_scores
 from app.services.reparse import deaccent
 
 DEFAULT_K = 10
 RRF_K = 60  # hằng số làm mượt của Reciprocal Rank Fusion
+# Trọng số mặc định khi không qua router (chốt bằng sweep trên gold query, Tuần 4)
+DEFAULT_WEIGHTS = {"vector": 1.0, "bm25": 0.6, "graph": 0.3}
 CANDIDATE_MULTIPLIER = 3
 MIN_ENTITY_TOKENS = 2
 MAX_GRAPH_PROJECTS = 10  # số dự án tối đa lấy từ graph cho một câu hỏi
@@ -103,6 +110,29 @@ def search_fts(db: Session, tenant_id: str, query: str, k: int = DEFAULT_K, proj
     ]
 
 
+def search_bm25(db: Session, tenant_id: str, query: str, k: int = DEFAULT_K, project_slug=None) -> list[dict]:
+    """Nhánh lexical của Tuần 4: BM25 có IDF + bigram âm tiết (xem services/lexical.py).
+
+    Lấy dư ứng viên rồi mới lọc theo dự án để việc lọc không làm mất top-k.
+    """
+    scored = bm25_scores(db, tenant_id, query, k * CANDIDATE_MULTIPLIER if project_slug else k)
+    if not scored:
+        return []
+    chunks = {
+        c.id: c
+        for c in db.scalars(select(Chunk).where(Chunk.id.in_([cid for cid, _ in scored]))).all()
+    }
+    results = []
+    for chunk_id, score in scored:
+        chunk = chunks.get(chunk_id)
+        if chunk is None or (project_slug and chunk.project_slug != project_slug):
+            continue
+        results.append(_as_result(chunk, score, len(results) + 1, "bm25"))
+        if len(results) >= k:
+            break
+    return results
+
+
 def search_vector(db: Session, tenant_id: str, query: str, k: int = DEFAULT_K, project_slug=None) -> list[dict]:
     """Tìm theo ngữ nghĩa bằng embedding (cosine)."""
     embedder = get_embedder()
@@ -128,14 +158,22 @@ def search_vector(db: Session, tenant_id: str, query: str, k: int = DEFAULT_K, p
     return [_as_result(chunk, score, i + 1, "vector") for i, (chunk, score) in enumerate(rows)]
 
 
-def reciprocal_rank_fusion(ranked_lists: list[list[dict]], k: int = DEFAULT_K) -> list[dict]:
-    """RRF: điểm = Σ 1/(RRF_K + hạng). Không cần chuẩn hóa thang điểm giữa các retriever."""
+def reciprocal_rank_fusion(
+    ranked_lists: list[list[dict]], k: int = DEFAULT_K, weights: list[float] | None = None
+) -> list[dict]:
+    """RRF: điểm = Σ wᵢ/(RRF_K + hạng).
+
+    `weights` cho phép hạ trọng số nhánh yếu — bài học từ Tuần 3: trọng số bằng nhau
+    kéo kết quả xuống thấp hơn cả nhánh vector đơn thuần.
+    """
+    if weights is None:
+        weights = [1.0] * len(ranked_lists)
     fused: dict[str, dict] = {}
-    for results in ranked_lists:
+    for weight, results in zip(weights, ranked_lists):
         for item in results:
             key = item["chunk_id"]
             entry = fused.setdefault(key, {**item, "score": 0.0, "retriever": ""})
-            entry["score"] += 1.0 / (RRF_K + item["rank"])
+            entry["score"] += weight / (RRF_K + item["rank"])
             sources = {s for s in entry["retriever"].split("+") if s}
             sources.add(item["retriever"])
             entry["retriever"] = "+".join(sorted(sources))
@@ -151,19 +189,82 @@ def reciprocal_rank_fusion(ranked_lists: list[list[dict]], k: int = DEFAULT_K) -
 def retrieve_r1(
     db: Session, tenant_id: str, query: str, k: int = DEFAULT_K, mode: str = "hybrid", project_slug=None
 ) -> list[dict]:
-    """R1 — baseline không dùng graph. mode: fts | vector | hybrid (RRF của hai cái trên)."""
+    """R1 — baseline không dùng graph.
+
+    mode: `fts` (tsvector thô, giữ lại để so sánh) · `bm25` · `vector` ·
+    `hybrid` (RRF có trọng số của bm25 + vector).
+    """
     if mode == "fts":
         return search_fts(db, tenant_id, query, k, project_slug)
+    if mode == "bm25":
+        return search_bm25(db, tenant_id, query, k, project_slug)
     if mode == "vector":
         return search_vector(db, tenant_id, query, k, project_slug)
     wide = k * CANDIDATE_MULTIPLIER
     return reciprocal_rank_fusion(
         [
-            search_fts(db, tenant_id, query, wide, project_slug),
+            search_bm25(db, tenant_id, query, wide, project_slug),
             search_vector(db, tenant_id, query, wide, project_slug),
         ],
         k,
+        weights=[DEFAULT_WEIGHTS["bm25"], DEFAULT_WEIGHTS["vector"]],
     )
+
+
+def retrieve_r3(
+    db: Session,
+    tenant_id: str,
+    query: str,
+    k: int = DEFAULT_K,
+    weights: dict | None = None,
+    use_router: bool = True,
+) -> tuple[list[dict], dict]:
+    """R3 — cấu hình production: BM25 + vector + graph, hợp nhất bằng RRF có trọng số.
+
+    Trả thêm `plan` của router để UI/báo cáo giải thích được vì sao chọn cấu hình đó.
+    """
+    from app.services.query_router import route  # tránh import vòng
+
+    plan = (
+        route(db, tenant_id, query)
+        if use_router
+        else {
+            "intent": "general",
+            "weights": dict(DEFAULT_WEIGHTS),
+            "project_slug": None,
+            "allowed_projects": [],
+            "matched_entities": [],
+            "prefer_chunk_types": [],
+            "explain": "router tắt",
+        }
+    )
+    if weights:
+        plan = {**plan, "weights": {**plan["weights"], **weights}}
+
+    wide = k * CANDIDATE_MULTIPLIER
+    project_slug = plan.get("project_slug")
+    allowed = set(plan.get("allowed_projects") or [])
+
+    def _restrict(results: list[dict]) -> list[dict]:
+        """Giữ nguyên thứ hạng tương đối nhưng chỉ giữ dự án mà câu hỏi nhắc tới."""
+        if not allowed:
+            return results
+        kept = [r for r in results if r.get("project_slug") in allowed]
+        for rank, item in enumerate(kept, start=1):
+            item["rank"] = rank
+        return kept
+
+    lists = [
+        _restrict(search_bm25(db, tenant_id, query, wide, project_slug)),
+        _restrict(search_vector(db, tenant_id, query, wide, project_slug)),
+        _restrict(retrieve_r2(db, tenant_id, query, wide)),
+    ]
+    fused = reciprocal_rank_fusion(
+        lists,
+        k,
+        weights=[plan["weights"]["bm25"], plan["weights"]["vector"], plan["weights"]["graph"]],
+    )
+    return fused, plan
 
 
 def match_entities(db: Session, tenant_id: str, query: str, limit: int = 5) -> list[GraphEntity]:

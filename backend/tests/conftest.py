@@ -24,6 +24,20 @@ engine = create_engine(
 TestingSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
+@pytest.fixture(autouse=True)
+def _offline_models():
+    """Test luôn chạy offline: embedder băm + generator mẫu.
+
+    Bảo đảm CI không cần GPU/model và không tải gì từ mạng; số liệu thí nghiệm
+    thật được chạy riêng bằng CLI với bge-m3 + Qwen (xem docs/checkpoints).
+    """
+    from app.core.config import settings
+
+    settings.embedding_backend = "hashing"
+    settings.llm_provider = "template"
+    yield
+
+
 @pytest.fixture()
 def db():
     Base.metadata.create_all(engine)

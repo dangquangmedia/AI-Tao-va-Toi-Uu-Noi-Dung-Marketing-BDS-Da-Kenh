@@ -14,9 +14,10 @@ from sqlalchemy import delete, func, select, text as sql_text
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models import Chunk, CleanListing, Fact, IngestionJob
+from app.models import Chunk, CleanListing, Fact, IngestionJob, LexicalPosting
 from app.services.chunking import build_chunks
 from app.services.embeddings import get_embedder
+from app.services.lexical import rebuild_postings
 
 JOB_TYPE = "index_build"
 DEFAULT_TIERS = ("A", "B")
@@ -92,6 +93,7 @@ def run_index_build(
             existing[(chunk.clean_listing_id, chunk.chunk_type, chunk.seq)] = chunk
 
     wanted: set[tuple[str, str, int]] = set()
+    touched: list[Chunk] = []  # chunk mới/đổi text → phải dựng lại posting BM25
     for listing in listings:
         job.total_read += 1
         for spec in build_chunks(listing, facts_by_source.get(listing.source_row_id, [])):
@@ -99,18 +101,18 @@ def run_index_build(
             wanted.add(key)
             chunk = existing.get(key)
             if chunk is None:
-                db.add(
-                    Chunk(
-                        tenant_id=tenant_id,
-                        clean_listing_id=listing.id,
-                        source_row_id=listing.source_row_id,
-                        source_listing_id="",
-                        source_url="",
-                        project_slug=listing.project_slug,
-                        tier=listing.tier,
-                        **spec,
-                    )
+                chunk = Chunk(
+                    tenant_id=tenant_id,
+                    clean_listing_id=listing.id,
+                    source_row_id=listing.source_row_id,
+                    source_listing_id="",
+                    source_url="",
+                    project_slug=listing.project_slug,
+                    tier=listing.tier,
+                    **spec,
                 )
+                db.add(chunk)
+                touched.append(chunk)
                 job.inserted += 1
             elif chunk.content_hash == spec["content_hash"]:
                 chunk.project_slug = listing.project_slug
@@ -124,6 +126,7 @@ def run_index_build(
                 chunk.tier = listing.tier
                 chunk.embedding = None  # text đổi → phải embed lại
                 chunk.search_vector = None
+                touched.append(chunk)
                 job.updated += 1
 
     stale = [chunk.id for key, chunk in existing.items() if key not in wanted]
@@ -148,6 +151,15 @@ def run_index_build(
     )
 
     indexed = refresh_search_vectors(db, tenant_id)
+
+    # Chỉ mục ngược BM25: dựng lại cho chunk vừa đổi; nếu tenant chưa có posting nào
+    # (lần đầu chạy sau khi thêm BM25) thì dựng cho toàn bộ.
+    has_postings = db.scalar(
+        select(LexicalPosting.id).where(LexicalPosting.tenant_id == tenant_id).limit(1)
+    )
+    postings = rebuild_postings(
+        db, tenant_id, [c.id for c in touched] if has_postings else None
+    )
 
     embedded = 0
     model_name = ""
@@ -178,6 +190,7 @@ def run_index_build(
         "chunks_total": total_chunks,
         "chunks_deleted": len(stale),
         "search_vectors_indexed": indexed,
+        "bm25_postings_written": postings,
         "embedded": embedded,
         "embedding_model": model_name,
         "embedding_backend": settings.embedding_backend,

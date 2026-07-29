@@ -14,7 +14,9 @@ import html
 import re
 import unicodedata
 
-PARSER_VERSION = "reparse_v1"
+# v2 (Tuần 4): thêm luật chặn giá trị phi lý của crawler (số phòng, diện tích).
+# Đổi version buộc pipeline re-parse lại toàn bộ thay vì giữ dữ liệu cũ.
+PARSER_VERSION = "reparse_v2"
 
 # --- D2: chuẩn hóa văn bản ------------------------------------------------
 
@@ -407,6 +409,31 @@ def extract_location(text: str) -> dict:
 
 # --- Phân tier (Plan/02 §5) ------------------------------------------------
 
+# --- D1.6: chặn giá trị phi lý của crawler ---------------------------------
+
+# Phát hiện khi soi Evidence panel ở Tuần 4: có tin ghi 92 phòng ngủ, 675 phòng tắm.
+# Đây là lỗi parser nguồn, không phải dữ liệu thật → bỏ giá trị và gắn flag thay vì
+# để fact rác chảy vào prompt sinh nội dung.
+MAX_ROOMS = 20
+MIN_AREA_M2, MAX_AREA_M2 = 5.0, 10_000.0
+
+
+def sanitize_rooms(value) -> int | None:
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return None
+    return number if 1 <= number <= MAX_ROOMS else None
+
+
+def sanitize_area(value) -> float | None:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if MIN_AREA_M2 <= number <= MAX_AREA_M2 else None
+
+
 TIER_B_TYPES = {"villa", "street_house", "private_house", "shophouse", "condotel"}
 TIER_C_TYPES = {"land", "project_land", "warehouse", "resort", "other"}
 TIER_B_MIN_DESC = 300
@@ -440,7 +467,9 @@ def reparse_record(raw: dict, canonical_url: str) -> dict:
     location = extract_location(text)
     legal = extract_legal(text)
     amenities = extract_amenities(text)
-    bedrooms = raw.get("bedrooms")
+    bedrooms = sanitize_rooms(raw.get("bedrooms"))
+    bathrooms = sanitize_rooms(raw.get("bathrooms"))
+    area_m2 = sanitize_area(raw.get("area_m2"))
     property_type = raw.get("property_type") or ""
     building = extract_building_code(text)
 
@@ -456,6 +485,15 @@ def reparse_record(raw: dict, canonical_url: str) -> dict:
         "legal": "from_text" if legal else "missing",
         "location": location_flag,
         "pii": "seller_dropped_phone_masked",
+        "outliers": ";".join(
+            name
+            for name, ok in (
+                ("bedrooms", raw.get("bedrooms") and bedrooms is None),
+                ("bathrooms", raw.get("bathrooms") and bathrooms is None),
+                ("area_m2", raw.get("area_m2") and area_m2 is None),
+            )
+            if ok
+        ),
     }
 
     return {
@@ -469,9 +507,9 @@ def reparse_record(raw: dict, canonical_url: str) -> dict:
         "ward": ward,
         "district": location["district"],
         "city": location["city"],
-        "area_m2": raw.get("area_m2"),
+        "area_m2": area_m2,
         "bedrooms": bedrooms,
-        "bathrooms": raw.get("bathrooms"),
+        "bathrooms": bathrooms,
         "total_price_vnd": price["total_price_vnd"],
         "price_per_m2_vnd": price["price_per_m2_vnd"],
         "price_confidence": price["price_confidence"],
