@@ -312,6 +312,7 @@ class Chunk(Base):
 
     text: Mapped[str] = mapped_column(Text)
     token_count: Mapped[int] = mapped_column(Integer, default=0)
+    lexical_len: Mapped[int] = mapped_column(Integer, default=0)  # số token BM25 (Tuần 4)
     content_hash: Mapped[str] = mapped_column(String(64), default="")  # hash text → biết khi cần embed lại
 
     embedding: Mapped[list | None] = mapped_column(_EMBEDDING_TYPE, nullable=True)
@@ -361,4 +362,71 @@ class RetrievalQuery(Base):
     expected_entities: Mapped[list] = mapped_column(JSON, default=list)
     generator: Mapped[str] = mapped_column(String(30), default="")  # template sinh ra query
     needs_review: Mapped[bool] = mapped_column(default=True)  # chờ Hải soát tay
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class LexicalPosting(Base):
+    """Chỉ mục ngược cho BM25 (Tuần 4) — một dòng cho mỗi (chunk, token).
+
+    Tách khỏi `chunks.search_vector` vì tsvector không giữ được tần suất theo cách
+    BM25 cần, và không cho phép tính IDF trên corpus của riêng tenant.
+    """
+
+    __tablename__ = "lexical_postings"
+    __table_args__ = (
+        Index("ix_lexical_postings_term", "tenant_id", "term"),
+        Index("ix_lexical_postings_chunk", "chunk_id"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    tenant_id: Mapped[str] = mapped_column(String(32), ForeignKey("tenants.id"))
+    chunk_id: Mapped[str] = mapped_column(String(32), ForeignKey("chunks.id"))
+    term: Mapped[str] = mapped_column(String(80))
+    tf: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class Generation(Base):
+    """Một lần sinh nội dung — log đủ để tái lập và để so sánh A–D (Plan/03 §7).
+
+    Lưu cả cấu hình (A/B/C/D + retrieval), prompt version + hash, model, seed, context
+    đã dùng (chunk/fact/graph path) và kết quả chấm claim. Không có bảng này thì bảng
+    kết quả thực nghiệm không chứng minh được là chạy trên cùng điều kiện.
+    """
+
+    __tablename__ = "generations"
+    __table_args__ = (Index("ix_generations_tenant_created", "tenant_id", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(32), ForeignKey("tenants.id"), index=True)
+    created_by: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"))
+
+    config: Mapped[str] = mapped_column(String(4), index=True)  # A | B | C | D
+    retrieval_config: Mapped[str] = mapped_column(String(10), default="none")  # none|R1|R2|R3
+    channel: Mapped[str] = mapped_column(String(20))
+    persona: Mapped[str] = mapped_column(String(20))
+    project_slug: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    clean_listing_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    brief: Mapped[str] = mapped_column(Text, default="")
+
+    prompt_version: Mapped[str] = mapped_column(String(30), default="")
+    prompt_hash: Mapped[str] = mapped_column(String(64), default="")
+    model_name: Mapped[str] = mapped_column(String(120), default="")
+    provider: Mapped[str] = mapped_column(String(30), default="")
+    seed: Mapped[int] = mapped_column(Integer, default=0)
+
+    context_chunk_ids: Mapped[list] = mapped_column(JSON, default=list)
+    context_fact_ids: Mapped[list] = mapped_column(JSON, default=list)
+    graph_paths: Mapped[list] = mapped_column(JSON, default=list)
+    router_plan: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    headline: Mapped[str] = mapped_column(Text, default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    cta: Mapped[str] = mapped_column(Text, default="")
+    raw_output: Mapped[str] = mapped_column(Text, default="")
+
+    claims: Mapped[list] = mapped_column(JSON, default=list)
+    metrics: Mapped[dict] = mapped_column(JSON, default=dict)
+    latency_ms: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(20), default="done")  # done | failed
+    error: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

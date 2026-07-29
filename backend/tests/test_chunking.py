@@ -50,7 +50,7 @@ def test_fact_card_chi_chua_du_kien_va_dinh_dang_gia():
     )
     assert "Giá: 4.9 tỷ" in card
     assert "Diện tích: 72.0" in card
-    assert "Pháp lý: so_hong" in card
+    assert "Pháp lý: sổ hồng" in card  # slug được đổi sang nhãn tiếng Việt (Tuần 4)
     assert "bo qua" not in card  # predicate lạ bị bỏ, không bịa nhãn
 
 

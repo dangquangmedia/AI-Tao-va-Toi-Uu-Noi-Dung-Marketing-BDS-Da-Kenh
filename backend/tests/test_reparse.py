@@ -190,3 +190,38 @@ def test_khong_gan_nham_tinh_thanh_vi_trung_chuoi_con():
     assert extract_location("Cho thuê căn hộ 2PN tại Thuận Giao")["city"] is None
     assert extract_location("Bán nhà tại thành phố Huế")["city"] == "Thừa Thiên Huế"
     assert extract_location("Chuyển nhượng gấp, thuê lại dài hạn")["city"] is None
+
+
+@pytest.mark.parametrize(
+    "raw_value,expected",
+    [(3, 3), (20, 20), (21, None), (92, None), (0, None), (None, None), ("x", None)],
+)
+def test_chan_so_phong_phi_ly(raw_value, expected):
+    """Crawler có tin ghi 92 phòng ngủ, 675 phòng tắm — bỏ giá trị thay vì để fact rác."""
+    from app.services.reparse import sanitize_rooms
+
+    assert sanitize_rooms(raw_value) == expected
+
+
+def test_chan_dien_tich_phi_ly():
+    from app.services.reparse import sanitize_area
+
+    assert sanitize_area(72.0) == 72.0
+    assert sanitize_area(10052.1) is None
+    assert sanitize_area(1.0) is None
+
+
+def test_reparse_gan_flag_outlier():
+    raw = {
+        "title": "Bán căn hộ 2PN Grand View",
+        "description": "Căn hộ đẹp, view sông." * 5,
+        "property_type": "apartment",
+        "bedrooms": 92,
+        "bathrooms": 2,
+        "area_m2": 70.0,
+    }
+    out = reparse_record(raw, URL_CO_MA_SO)
+
+    assert out["bedrooms"] is None
+    assert out["bathrooms"] == 2
+    assert out["field_flags"]["outliers"] == "bedrooms"

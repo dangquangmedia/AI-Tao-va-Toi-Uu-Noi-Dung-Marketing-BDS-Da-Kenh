@@ -10,6 +10,7 @@ const LINKS = [
   { href: "/data", label: "Dữ liệu" },
   { href: "/graph", label: "Tri thức" },
   { href: "/search", label: "Truy xuất" },
+  { href: "/studio", label: "Studio" },
   { href: "/dataset", label: "Dataset" },
 ];
 

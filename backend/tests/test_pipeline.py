@@ -11,6 +11,7 @@ from sqlalchemy import func, select
 
 from app.models import CleanListing, Fact, GraphEdge, GraphEntity, QuarantineRecord
 from app.services.ingestion import run_databds_import
+from app.services.reparse import PARSER_VERSION
 from app.services.pipeline import run_clean_pipeline
 from tests.test_ingestion import CSV_HEADER
 
@@ -123,7 +124,7 @@ def test_moi_fact_deu_co_provenance(db, imported):
         assert fact.source_url.startswith("https://batdongsan.com.vn/")
         assert fact.source_listing_id
         assert fact.content_hash
-        assert fact.parser_version == "reparse_v1"
+        assert fact.parser_version == PARSER_VERSION
         assert fact.evidence  # không có fact nào thiếu bằng chứng
         assert fact.valid_from and fact.valid_to  # tin EXPIRED có khoảng hiệu lực
 

@@ -3,8 +3,8 @@
 > **File bắt đầu duy nhất cho phiên làm việc mới.** Khi mở lại dự án, hãy đọc file này trước. Chỉ mở các tài liệu hoặc mã nguồn được dẫn ở đây khi nhiệm vụ hiện tại thực sự cần chi tiết hơn.
 
 **Dự án:** AI tạo và tối ưu nội dung marketing BĐS đa kênh
-**Cập nhật gần nhất:** 28/07/2026
-**Trạng thái tổng thể:** Tuần 1, 2, 3 đều đã merge vào `main` (mới nhất `e79f486`); **Tuần 3 hoàn tất** — knowledge base 9.656 chunk đã embed bằng **BAAI/bge-m3 chạy trên GPU**, FTS tiếng Việt + pgvector HNSW, entity resolution nâng lên 617 dự án, `dataset_v1` đóng băng với leakage audit **đạt**, 72 gold query, 1.500 mẫu SFT nháp, R1/R2 chạy thật (R1-vector precision@10 = 0,850 · R2-graph recall = 0,862), 81/81 tests pass. Còn thiếu duy nhất staging URL (chờ tài khoản cloud).
+**Cập nhật gần nhất:** 29/07/2026 (sáng)
+**Trạng thái tổng thể:** Tuần 1–3 đã merge vào `main`; **Tuần 4 hoàn tất, kể cả baseline A/B** — RAG giảm tỷ lệ claim vô căn cứ **0,2042 → 0,0917 (−55%)**, tốt hơn ở cả 4/4 brief — BM25 tiếng Việt tự cài đưa nhánh lexical từ 0,090 lên 0,964 precision@10, R3 (RRF có trọng số + query router) đạt **precision 1,000 · recall 0,938 · MRR 1,000** trên 72 gold query; Content Studio 4 kênh + Evidence panel chạy thật với **Qwen2.5-3B-Instruct 4-bit trên GPU máy** (VRAM 2,1GB); mọi lần sinh được log đủ prompt hash/model/seed/context để tái lập. Nền tảng Tuần 3 giữ nguyên — knowledge base 9.656 chunk đã embed bằng **BAAI/bge-m3 chạy trên GPU**, FTS tiếng Việt + pgvector HNSW, entity resolution nâng lên 617 dự án, `dataset_v1` đóng băng với leakage audit **đạt**, 72 gold query, 1.500 mẫu SFT nháp, R1/R2 chạy thật (R1-vector precision@10 = 0,850 · R2-graph recall = 0,862), 81/81 tests pass. Còn thiếu duy nhất staging URL (chờ tài khoản cloud).
 
 ---
 
@@ -49,17 +49,45 @@
 - **Lê Văn Quang:** hệ thống + tích hợp — backend/frontend, database, auth/RBAC/tenant, graph storage/traversal, hybrid retrieval, CI/CD, dashboard, deployment.
 - **Phạm Vũ Hải:** dữ liệu + mô hình — crawler/contract, làm sạch, SFT dataset, QLoRA, evaluation, vision data.
 
-## 5. Việc cần làm tiếp theo (đầu Tuần 4)
+## 5a. Kết quả baseline A/B (chạy xong 29/07)
 
-1. **Chọn nền tảng cloud + cấp tài khoản** → deploy staging (carry-over từ Tuần 1, vẫn chưa xong).
-2. **R3 = RRF có trọng số (R1 + R2)** + query router. Bằng chứng Tuần 3 cho thấy RRF trọng số bằng nhau làm giảm chất lượng (0,551 so với 0,850 của vector đơn thuần).
-3. Cải thiện nhánh lexical: BM25 có IDF + tách từ tiếng Việt (R1-fts hiện chỉ 0,087 precision).
-4. Hải: soát tay 72 gold query rồi khóa benchmark; prompt baseline + chạy A/B.
-5. Content Studio 4 kênh + Evidence panel (dùng chunk + facts đã có provenance).
-6. Chốt danh sách human rater (theo `Plan/03` §5) — không để trễ tới Tuần 6.
-7. **Chuẩn bị GPU thuê cho Tuần 5:** GTX 1650 Ti 4GB đủ chạy embedding nhưng không đủ QLoRA 7–8B (cần ≥12GB).
+4 brief lấy từ dự án thuộc split test × 2 cấu hình, `Qwen2.5-1.5B-Instruct` fp16 trên GPU máy, greedy + seed 42, retrieval R3 với k = 3:
 
-Chi tiết + cách chạy local: `docs/checkpoints/week_01_report.md`, `week_02_report.md`, `week_03_report.md`.
+| Chỉ số | A (prompt-only) | B (RAG) |
+|---|---:|---:|
+| Tỷ lệ claim không có căn cứ | 0,2042 | **0,0917** (−55%) |
+| Bài có ít nhất 1 claim vô căn cứ | 4/4 | **2/4** |
+| Số claim trung bình mỗi bài | 5,00 | 5,25 |
+| Thời gian sinh trung bình | 72,6 giây | 100,6 giây |
+
+**B tốt hơn A ở cả 4/4 brief, không ca nào RAG làm xấu đi.** Số claim không giảm → B không né nói số để ăn điểm, mà nói số đúng hơn. **Cảnh báo bắt buộc khi trích dẫn: n = 4, chưa kiểm định thống kê được** — đây là baseline xác nhận hướng, không phải kết luận. Cỡ mẫu thật (40–60 brief + human eval mù) chạy khi có GPU thuê.
+
+Bảng chi tiết: `docs/checkpoints/week_04_ab_baseline.md`; phân tích: `week_04_report.md` §2.3.
+
+**Bằng chứng tái lập đã có:** cùng một brief sinh lại ở hai tiến trình khác nhau cách nhau 10,5 giờ cho **raw output trùng khít từng byte** (cùng `prompt_hash`, cùng SHA-256). Đây là câu trả lời sẵn cho câu hỏi hội đồng "kết quả có tái lập được không".
+
+**Bài học vận hành:** batch tối 28/07 chết vì tắt Docker Desktop trước khi tiến trình Python xong → luôn `docker compose up -d` trước và để batch kết thúc rồi mới tắt máy.
+
+**Chưa làm, cố ý bỏ qua:** chạy lại toàn bộ pipeline theo `reparse_v2`. Ảnh chụp DB hiện tại vẫn là bản **trước** `reparse_v2`, tức 31 tin phòng ngủ phi lý vẫn còn trong dữ liệu đang chạy; luật chặn đã có trong code, chỉ chờ lần rebuild kế tiếp (khoảng 15 phút GPU). **Phải ghi rõ điều này nếu trích số liệu từ DB hiện tại.**
+
+## 5. Việc cần làm tiếp theo (đầu Tuần 5)
+
+1. **Chốt GPU thuê ≥12GB cho QLoRA** — việc gấp nhất. GTX 1650 Ti 4GB chỉ đủ embedding và sinh nội dung model nhỏ (1.5B fp16 ~50–107 giây/bài), không đủ fine-tune 7–8B.
+2. **Chọn nền tảng cloud + cấp tài khoản** → deploy staging (carry-over từ Tuần 1, vẫn chưa xong).
+3. Hải: soát tay 72 gold query **và viết thêm bộ câu hỏi khó không nêu tên dự án** — bộ hiện tại đều nêu tên nên R3 đạt precision 1,000, chưa phản ánh ca thật (giải thích ở `week_04_report.md` §1.4).
+4. Pilot 2–3 backbone → chốt model chính thức (Plan/03 §3); QLoRA main run → cấu hình C.
+5. Reviewer flow: duyệt/từ chối/version/export (gate Tuần 5).
+6. Hải: biến 1.500 mẫu SFT nháp thành gold/silver đã review để train được.
+7. Chốt danh sách human rater (Plan/03 §5) — không để trễ tới Tuần 6.
+
+Chi tiết + cách chạy local: `docs/checkpoints/week_01_report.md` → `week_04_report.md`.
+
+## 5b. Bài học kỹ thuật của Tuần 4 (giữ lại để viết báo cáo)
+
+- **Negative result Tuần 3 có nguyên nhân cụ thể, không phải lỗi của RRF.** Nhánh lexical `ts_rank_cd` thiếu IDF và cắt sai từ tiếng Việt. Thay bằng BM25 tự cài (IDF thật + bigram âm tiết) → 0,090 lên 0,964; RRF có trọng số → 0,981. Cả hai số đều đo trên cùng 72 gold query.
+- **Router phải áp bộ lọc cho *mọi* nhánh.** Bản đầu chỉ lọc bm25/vector, để graph kéo dự án hàng xóm 2-hop vào nên kém hơn trọng số cố định (0,824 < 0,899); sau khi graph cũng tôn trọng `allowed_projects` thì đạt 1,000.
+- **Model nhỏ hơn không cứu được VRAM thiếu.** Đổi từ Qwen2.5-3B 4-bit sang Qwen2.5-1.5B fp16 chỉ giảm 280–330 giây xuống 251 giây một bài — không phải bước nhảy như kỳ vọng, vì fp16 1.5B chiếm ~3,6/4 GB nên vẫn tràn sang RAM hệ thống. Kết luận: 4 GB là trần cứng cho khâu sinh nội dung, phải thuê GPU chứ không tối ưu tiếp được.
+- **Evidence panel là công cụ soát dữ liệu, không chỉ để trình diễn.** Nhìn UI mới phát hiện fact "81 phòng ngủ"; truy ra 31 tin > 20 phòng ngủ và 30 tin > 20 phòng tắm (cao nhất 675) do parser nguồn. Đã thêm luật chặn ở D1 (`reparse_v2`).
 
 ## 6. Nguyên tắc giữ phạm vi
 
@@ -89,15 +117,24 @@ Nếu trễ, cắt theo thứ tự: DPO → ablation D+V+R → video/đa ngôn n
 | 28/07/2026 | **Tuần 3 — knowledge base + dataset_v1** | Migration `4982a1adb98d` + `a7aad62eeea9`; 81/81 tests; 9.656 chunk embed bằng bge-m3 trên GPU (8,8 phút) | Index idempotent; FTS + pgvector HNSW chạy thật |
 | 28/07/2026 | Entity resolution bằng từ điển phường | `app/services/alias.py` | Dự án 347 → **617**; tin Tier A 862 → **1.539**; tên dự án có dấu |
 | 28/07/2026 | Đóng băng `dataset_v1` | `docs/checkpoints/week_03_data_card.md` | Split 69,3/14,7/16,0 theo đơn vị; **leakage audit đạt (0 rò rỉ)**; 72 gold query; 1.500 mẫu SFT nháp |
+| 28/07/2026 | **Tuần 4 — BM25 + R3 + Content Studio** | Migration `98f8c5885510` + `d715c20e509f`; 108/108 tests; `week_04_report.md` | Nhánh lexical 0,090 → **0,964**; R3-router **precision 1,000 · recall 0,938 · MRR 1,000** |
+| 28/07/2026 | Sweep trọng số RRF của R3 | 6 cấu hình × 72 query, bảng trong `week_04_retrieval_eval.md` | Chốt vector 1,0 · bm25 0,6 · graph 0,3; R3 không nhạy với trọng số (0,899–0,910) |
+| 28/07/2026 | Generator chạy trên GPU máy | `Qwen/Qwen2.5-3B-Instruct` 4-bit NF4, GTX 1650 Ti | VRAM đỉnh **2,1GB**, ~3,2 token/giây, greedy + seed cố định → tái lập được |
+| 28/07/2026 | Chặn dữ liệu phi lý phát hiện qua UI | `reparse_v2`: bedrooms/bathrooms 1–20, area 5–10.000 m² | Loại 31 tin > 20 phòng ngủ (max 92) và 30 tin > 20 phòng tắm (max 675) |
+| 29/07/2026 | **Baseline A vs B** | `docs/checkpoints/week_04_ab_baseline.md` — 4 brief × 2 cấu hình, Qwen2.5-1.5B fp16 trên GPU | Claim vô căn cứ **0,2042 → 0,0917 (−55%)**; B thắng 4/4 brief; n = 4 nên chưa kiểm định thống kê |
+| 29/07/2026 | Tái lập được kết quả sinh | Hai lượt chạy cách nhau 10,5 giờ, cùng `prompt_hash dddc1d863e7c`, seed 42 | Raw output **trùng khít từng byte** (SHA-256 `0156f6a9…`) |
 | 28/07/2026 | Đánh giá retrieval R1/R2 | `docs/checkpoints/week_03_retrieval_eval.md` | R1-vector precision@10 **0,850** · MRR 0,921; R2-graph recall **0,862**; R1-fts chỉ 0,087 và RRF không trọng số kém hơn vector → cần BM25 + RRF có trọng số ở Tuần 4 |
 
 ## 9. Blocker và câu hỏi mở
 
 | Mức độ | Vấn đề | Owner | Hành động tiếp theo |
 |---|---|---|---|
+| Cao | **Chưa có GPU đủ cho QLoRA Tuần 5** | Quang + Hải | GTX 1650 Ti 4GB chỉ chạy được embedding + sinh model nhỏ; QLoRA 7–8B cần ≥12GB → thuê giờ (Colab Pro/vast.ai/Kaggle), pilot backbone nhỏ để dự phòng |
 | Cao | **Chưa có staging URL** (carry-over từ Tuần 1) | Quang | Cần Anh chọn nền tảng cloud + cấp tài khoản; deploy ngay sau đó |
-| Cao | **GPU máy (GTX 1650 Ti 4GB) không đủ QLoRA 7–8B** — đủ cho embedding | Hải + Quang | Thuê GPU ≥12GB theo giờ trước Tuần 5; pilot backbone nhỏ để dự phòng |
-| Trung bình | R1-fts yếu (precision 0,086) kéo RRF xuống dưới vector đơn thuần | Quang | Tuần 4: BM25 + tách từ tiếng Việt, RRF có trọng số |
+| Trung bình | Gold query đều nêu tên dự án → precision 1,000 chưa phản ánh ca khó | Hải | Viết thêm bộ câu hỏi không nêu tên dự án ở Tuần 5 |
+| Trung bình | Baseline A/B mới có **n = 4 brief** — chưa đủ kiểm định thống kê | Hải + Quang | Frozen test 40–60 brief + human eval mù, chạy trên GPU thuê (Tuần 5–6) |
+| Trung bình | Ảnh chụp DB đang chạy vẫn là bản **trước `reparse_v2`** | Quang | Chạy `pipeline_cli --rebuild` → `index_cli` → `dataset_cli --build --eval` (~15 phút GPU) trước khi lấy số liệu cuối |
+| ~~Trung bình~~ | ~~R1-fts yếu (precision 0,086) kéo RRF xuống dưới vector~~ — **đã xử lý ở Tuần 4** | Quang | BM25 tự cài + RRF có trọng số → 0,964 / 0,981 |
 | Trung bình | 72 gold query chưa soát tay | Hải | Soát và bỏ cờ `needs_review` trước khi khóa benchmark |
 | Trung bình | Chưa chốt danh sách human rater | Cả nhóm | Chốt từ Tuần 3 theo `Plan/03` §5 |
 
@@ -107,13 +144,16 @@ Nếu trễ, cắt theo thứ tự: DPO → ablation D+V+R → video/đa ngôn n
 
 ## Current State & Hand-off
 
-- 28/07/2026: xong Tuần 1, 2, 3 — cả ba đã merge vào `main` (commit gần nhất `fd5ff3e`), đã push GitHub.
-- Code hiện có: `backend/` (FastAPI + SQLAlchemy + Alembic; auth/RBAC/tenant, ingestion raw, pipeline D1–D5, facts + graph ≤2 hop, chunking/FTS/embedding, retrieval R1–R2, dataset split + gold query + SFT builder, fact editor API) · `frontend/` (Next.js 15: login, `/projects`, `/data`, `/graph`, `/search`, `/dataset`).
+- 29/07/2026: xong Tuần 1–4, tất cả đã ở `main` (Tuần 4 làm trên branch `tuan-04-baseline-ab` rồi merge).
+- Code hiện có: `backend/` (FastAPI + SQLAlchemy + Alembic; auth/RBAC/tenant, ingestion raw, pipeline D1–D5, facts + graph ≤2 hop, chunking/FTS/embedding, **BM25 tự cài**, retrieval R1–R3 + query router, dataset split + gold query + SFT builder, **model gateway + prompt có version + claim check + logging generations**) · `frontend/` (Next.js 15: login, `/projects`, `/data`, `/graph`, `/search`, `/studio`, `/dataset`).
 - Dữ liệu trên PostgreSQL local (`docker compose up -d`): 4.795 tin raw · 4.794 tin sạch · 31.167 facts · graph 1.941 node / 2.653 cạnh · 9.656 chunk đã embed bằng `BAAI/bge-m3` · `dataset_v1` đã đóng băng · 72 gold query · 1.500 mẫu SFT nháp.
 - Lệnh hay dùng (chạy trong `backend/`):
   - `python -m app.pipeline_cli --rebuild --report ..\docs\checkpoints\week_02_data_quality.md` — chạy lại D1–D5 khi đổi luật parser
   - `python -m app.index_cli` — chunk + FTS + embed bge-m3 trên GPU (~9 phút cho 9.656 chunk)
-  - `python -m app.dataset_cli --build --eval` — split + gold query + SFT + data card + bảng đánh giá retrieval
-  - Máy không GPU: thêm `--backend hashing` (chỉ để pipeline chạy, **không dùng cho số liệu báo cáo**)
+  - `python -m app.dataset_cli --build --eval --sweep` — split + gold query + SFT + data card + bảng R1–R3 + sweep trọng số
+  - `python -m app.ab_cli --briefs 4 --k 3 --max-new-tokens 200` — chạy baseline A/B trên GPU (mỗi bài 3–6 phút)
+  - Máy không GPU: thêm `--backend hashing` (index) và `--provider template` (sinh nội dung) — chỉ để pipeline chạy, **không dùng cho số liệu báo cáo**. Test tự động luôn chạy ở chế độ này (`tests/conftest.py`).
+- Phụ thuộc nặng (torch/transformers/bitsandbytes/sentence-transformers) nằm ở `backend/requirements-ml.txt`, tách khỏi `requirements.txt` để CI không phải tải model.
 - Môi trường: backend cổng **8001** (cổng 8000 bị `latcat.exe` chiếm), frontend 3000, tài khoản demo `admin@cancu.demo` / `cancu123`. GPU: GTX 1650 Ti 4GB, torch 2.6.0+cu124, CUDA hoạt động.
-- Việc đầu tiên phiên tới: Tuần 4 theo `Plan/01` §6 — R3 (RRF có trọng số) + BM25 tiếng Việt + query router + Content Studio 4 kênh; xem mục 5 ở trên.
+- Việc đầu tiên phiên tới: Tuần 5 theo `Plan/01` §6 — pilot backbone + QLoRA (cấu hình C) + reviewer flow; **chốt GPU thuê trước khi bắt đầu**. Xem mục 5.
+- Nhớ bật `docker compose up -d` trước mọi lệnh CLI — batch tối 28/07 chết vì Docker tắt trước tiến trình Python.

@@ -18,7 +18,7 @@ from app.services import data_card
 from app.services.dataset import build_dataset_split, leakage_audit
 from app.services.gold_queries import generate_gold_queries
 from app.services.retrieval import retrieval_stats
-from app.services.retrieval_eval import evaluate, render_markdown
+from app.services.retrieval_eval import evaluate, render_markdown, sweep_weights
 from app.services.sft_builder import build_sft_draft
 
 
@@ -28,6 +28,7 @@ def main() -> None:
     parser.add_argument("--version", default=settings.dataset_version)
     parser.add_argument("--build", action="store_true")
     parser.add_argument("--eval", action="store_true")
+    parser.add_argument("--sweep", action="store_true", help="quét trọng số RRF của R3")
     parser.add_argument("--k", type=int, default=10)
     parser.add_argument("--backend", default=None, help="ghi đè embedding_backend khi đánh giá")
     parser.add_argument("--card", default="../docs/checkpoints/week_03_data_card.md")
@@ -73,11 +74,20 @@ def main() -> None:
         if args.eval:
             stats = retrieval_stats(db, tenant.id)
             print(f"Knowledge base: {stats}")
+            sweep = sweep_weights(db, tenant.id, args.version, k=args.k) if args.sweep else None
+            if sweep:
+                for row in sweep:
+                    print(
+                        f"  sweep {row['weights']} precision={row['project_precision']:.3f} "
+                        f"recall={row['listing_recall']:.3f} mrr={row['mrr']:.3f}"
+                    )
             report = evaluate(db, tenant.id, args.version, k=args.k)
             out = Path(args.eval_out)
             out.parent.mkdir(parents=True, exist_ok=True)
             out.write_text(
-                render_markdown(report, stats["embedding_model"] or settings.embedding_model, args.version),
+                render_markdown(
+                    report, stats["embedding_model"] or settings.embedding_model, args.version, sweep
+                ),
                 encoding="utf-8",
             )
             for config, data in report.get("configs", {}).items():

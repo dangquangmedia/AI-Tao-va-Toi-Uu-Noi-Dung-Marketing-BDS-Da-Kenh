@@ -36,6 +36,38 @@ PREDICATE_LABELS = {
 }
 _PRICE_PREDICATES = {"total_price_vnd", "price_per_m2_vnd"}
 
+# Giá trị chuẩn hóa trong DB là slug không dấu; khi đưa vào chunk/prompt phải trả về
+# tiếng Việt để model không copy nguyên "noi_that" vào bài viết.
+VALUE_LABELS = {
+    "so_hong": "sổ hồng",
+    "so_do": "sổ đỏ",
+    "so_rieng": "sổ riêng",
+    "so_hong_rieng": "sổ hồng riêng",
+    "hdmb": "hợp đồng mua bán",
+    "cong_chung": "công chứng",
+    "vi_bang": "vi bằng",
+    "giay_to_tay": "giấy tờ tay",
+    "chinh_chu": "chính chủ",
+    "ho_boi": "hồ bơi",
+    "gym": "phòng gym",
+    "cong_vien": "công viên",
+    "truong_hoc": "trường học",
+    "sieu_thi": "siêu thị",
+    "ttmt": "trung tâm thương mại",
+    "thang_may": "thang máy",
+    "an_ninh": "an ninh 24/7",
+    "bai_do_xe": "bãi đỗ xe",
+    "ham_de_xe": "hầm để xe",
+    "san_vuon": "sân vườn",
+    "ban_cong": "ban công",
+    "view_song": "view sông",
+    "noi_that": "nội thất",
+}
+
+
+def value_label(value: str) -> str:
+    return VALUE_LABELS.get(value, value)
+
 
 def content_hash(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -81,7 +113,7 @@ def render_fact_card(listing, facts) -> str:
         if fact.predicate in _PRICE_PREDICATES and fact.value_num:
             value = _format_price(fact.value_num)
         else:
-            value = fact.value_text
+            value = value_label(fact.value_text)
         grouped.setdefault(label, [])
         if value not in grouped[label]:
             grouped[label].append(value)

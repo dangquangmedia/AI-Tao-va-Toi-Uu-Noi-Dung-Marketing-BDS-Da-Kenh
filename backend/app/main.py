@@ -4,7 +4,17 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, dataset, graph, ingestion, listings, pipeline, projects, search
+from app.api import (
+    auth,
+    dataset,
+    generation,
+    graph,
+    ingestion,
+    listings,
+    pipeline,
+    projects,
+    search,
+)
 from app.core.config import settings
 
 
@@ -34,6 +44,7 @@ app.include_router(ingestion.router)
 app.include_router(pipeline.router)
 app.include_router(listings.router)
 app.include_router(graph.router)
+app.include_router(generation.router)
 app.include_router(search.router)
 app.include_router(dataset.router)
 

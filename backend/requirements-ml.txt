@@ -1,8 +1,10 @@
-# Phụ thuộc cho embedding/fine-tuning — KHÔNG cài trong CI (nặng vài GB).
-# Test dùng embedder băm tất định nên CI chỉ cần requirements.txt.
+# Phụ thuộc nặng cho embedding và sinh nội dung — chỉ cài trên máy chạy model,
+# KHÔNG cài trong CI (test dùng backend `hashing` + provider `template`).
 #
-# Cài trên máy có GPU NVIDIA (CUDA 12.4):
+# GPU (khuyến nghị): cài torch bản CUDA trước
 #   pip install torch --index-url https://download.pytorch.org/whl/cu124
-#   pip install -r requirements-ml.txt
-# Máy không GPU: pip install torch  (bản CPU, chậm hơn nhiều)
 sentence-transformers==3.3.1
+transformers==4.48.0
+accelerate==1.2.1
+bitsandbytes==0.45.0
+sentencepiece==0.2.0

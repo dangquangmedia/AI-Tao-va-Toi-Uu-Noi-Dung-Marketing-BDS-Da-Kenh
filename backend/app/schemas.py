@@ -163,3 +163,51 @@ class RetrievalQueryOut(BaseModel):
     needs_review: bool
 
     model_config = {"from_attributes": True}
+
+
+class RetrieveIn(BaseModel):
+    query: str = Field(min_length=2)
+    config: str = Field(default="R3", pattern=r"^(R1|R2|R3)$")
+    mode: str = Field(default="hybrid", pattern=r"^(fts|bm25|vector|hybrid)$")
+    k: int = Field(default=10, ge=1, le=50)
+
+
+class GenerateIn(BaseModel):
+    brief: str = Field(min_length=5, max_length=1000)
+    channel: str = Field(pattern=r"^(description|facebook|email|landing_seo)$")
+    persona: str = Field(pattern=r"^(young_family|investor|first_home)$")
+    config: str = Field(default="B", pattern=r"^(A|B)$")
+    retrieval_config: str = Field(default="R3", pattern=r"^(R1|R2|R3)$")
+    project_slug: str | None = None
+    brand: dict | None = None
+    k: int = Field(default=6, ge=1, le=20)
+
+
+class GenerationOut(BaseModel):
+    id: str
+    config: str
+    retrieval_config: str
+    channel: str
+    persona: str
+    project_slug: str | None
+    brief: str
+    prompt_version: str
+    prompt_hash: str
+    model_name: str
+    provider: str
+    seed: int
+    context_chunk_ids: list
+    context_fact_ids: list
+    graph_paths: list
+    router_plan: dict
+    headline: str
+    body: str
+    cta: str
+    claims: list
+    metrics: dict
+    latency_ms: int
+    status: str
+    error: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

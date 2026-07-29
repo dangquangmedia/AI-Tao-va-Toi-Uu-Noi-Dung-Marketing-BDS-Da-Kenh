@@ -27,5 +27,16 @@ class Settings(BaseSettings):
     artifacts_dir: str = "artifacts"
     dataset_version: str = "dataset_v1"
 
+    # Generator cho cấu hình A/B (Tuần 4). Xem services/llm.py.
+    llm_provider: str = "local"  # local | openai | template
+    llm_model: str = "Qwen/Qwen2.5-3B-Instruct"
+    llm_device: str = "auto"
+    llm_load_in_4bit: bool = True  # vừa GPU 4GB
+    llm_max_new_tokens: int = 600
+    llm_seed: int = 42
+    openai_api_key: str = ""
+    openai_base_url: str = ""
+    prompt_version: str = "prompt_v1"
+
 
 settings = Settings()
