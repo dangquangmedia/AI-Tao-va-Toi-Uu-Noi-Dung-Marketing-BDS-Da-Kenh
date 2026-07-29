@@ -1,0 +1,13 @@
+# Phụ thuộc cho máy GPU chạy QLoRA — tách hẳn khỏi backend/requirements*.txt vì máy train
+# không cài web app. Ghim version để môi trường Colab (hay đổi) không phá vòng huấn luyện.
+#
+# torch cài riêng theo đúng bản CUDA của máy, ví dụ:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+# Trên Colab torch đã có sẵn — bỏ qua bước này.
+
+transformers==4.48.0
+peft==0.14.0
+bitsandbytes==0.45.0
+accelerate==1.2.1
+sentencepiece==0.2.0
+safetensors>=0.4.5

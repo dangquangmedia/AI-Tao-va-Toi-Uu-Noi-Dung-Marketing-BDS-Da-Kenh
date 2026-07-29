@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
     auth,
+    content,
     dataset,
     generation,
     graph,
@@ -45,6 +46,7 @@ app.include_router(pipeline.router)
 app.include_router(listings.router)
 app.include_router(graph.router)
 app.include_router(generation.router)
+app.include_router(content.router)
 app.include_router(search.router)
 app.include_router(dataset.router)
 

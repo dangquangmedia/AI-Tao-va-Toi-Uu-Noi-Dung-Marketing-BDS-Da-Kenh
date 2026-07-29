@@ -6,6 +6,7 @@ from app.db import get_db
 from app.deps import get_current_user, require_roles
 from app.models import Generation, User
 from app.schemas import GenerateIn, GenerationOut, RetrieveIn
+from app.services.adapters import adapters_root, default_adapter_name, list_adapters
 from app.services.generation import run_generation
 from app.services.query_router import route
 from app.services.retrieval import retrieve_r1, retrieve_r2, retrieve_r3
@@ -30,26 +31,48 @@ def retrieve(
     return {"plan": plan, "results": results}
 
 
+@router.get("/adapters")
+def list_generation_adapters(user: User = Depends(get_current_user)):
+    """Adapter QLoRA đang có trên máy chủ — UI dùng để bật/tắt cấu hình C và D.
+
+    Trả cả adapter hỏng kèm lý do, để lúc bàn giao biết ngay thiếu file gì thay vì chỉ
+    thấy "không có adapter nào".
+    """
+    items = list_adapters()
+    return {
+        "adapters": items,
+        "default": default_adapter_name(),
+        "dir": str(adapters_root()),
+        "ready": any(a["loadable"] for a in items),
+    }
+
+
 @router.post("", response_model=GenerationOut)
 def create_generation(
     body: GenerateIn,
     user: User = Depends(require_roles("admin", "marketer")),
     db: Session = Depends(get_db),
 ):
-    """Sinh nội dung theo cấu hình A (prompt-only) hoặc B (RAG)."""
-    return run_generation(
-        db,
-        tenant_id=user.tenant_id,
-        created_by=user.id,
-        brief=body.brief,
-        channel=body.channel,
-        persona=body.persona,
-        config=body.config,
-        retrieval_config=body.retrieval_config,
-        project_slug=body.project_slug,
-        brand=body.brand,
-        k=body.k,
-    )
+    """Sinh nội dung theo cấu hình A/B (model gốc) hoặc C/D (model + adapter QLoRA)."""
+    try:
+        return run_generation(
+            db,
+            tenant_id=user.tenant_id,
+            created_by=user.id,
+            brief=body.brief,
+            channel=body.channel,
+            persona=body.persona,
+            config=body.config,
+            retrieval_config=body.retrieval_config,
+            project_slug=body.project_slug,
+            brand=body.brand,
+            k=body.k,
+            adapter_name=body.adapter,
+        )
+    except (FileNotFoundError, ValueError) as exc:
+        # Chưa bàn giao adapter, hoặc adapter thiếu file — lỗi cấu hình phía người dùng,
+        # không phải lỗi hệ thống. Trả nguyên thông báo vì nó đã chứa hướng dẫn xử lý.
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc)) from exc
 
 
 @router.get("", response_model=list[GenerationOut])

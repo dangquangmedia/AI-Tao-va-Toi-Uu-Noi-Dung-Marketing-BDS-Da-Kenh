@@ -40,6 +40,14 @@ type RetrievalItem = {
   retriever: string;
   path: string[] | null;
 };
+type Adapter = {
+  name: string;
+  base_model: string | null;
+  loadable: boolean;
+  problems: string[];
+  card: { dataset_version?: string; metrics?: { eval_loss?: number } };
+};
+type AdapterInfo = { adapters: Adapter[]; default: string; dir: string; ready: boolean };
 
 const CHANNELS = [
   { value: "description", label: "Mô tả BĐS" },
@@ -52,6 +60,19 @@ const PERSONAS = [
   { value: "investor", label: "Nhà đầu tư" },
   { value: "first_home", label: "Mua nhà lần đầu" },
 ];
+// Ma trận A–D của Plan/01 §5.1: khác nhau đúng hai biến — truy xuất và adapter QLoRA
+const PAIRS = [
+  { value: "AB", left: "A", right: "B", label: "A vs B — đo đóng góp của RAG" },
+  { value: "CD", left: "C", right: "D", label: "C vs D — RAG trên model đã QLoRA" },
+  { value: "AC", left: "A", right: "C", label: "A vs C — đo đóng góp của QLoRA" },
+  { value: "BD", left: "B", right: "D", label: "B vs D — QLoRA khi đã có RAG" },
+];
+const CONFIG_LABELS: Record<string, string> = {
+  A: "A — prompt-only",
+  B: "B — RAG",
+  C: "C — QLoRA",
+  D: "D — RAG + QLoRA",
+};
 
 function ClaimList({ claims }: { claims: Claim[] }) {
   if (!claims?.length) return <p className="hint">Không có claim nào cần kiểm chứng.</p>;
@@ -109,12 +130,20 @@ export default function StudioPage() {
   const [genB, setGenB] = useState<Generation | null>(null);
   const [evidence, setEvidence] = useState<RetrievalItem[]>([]);
   const [plan, setPlan] = useState<{ intent?: string; explain?: string } | null>(null);
+  const [pair, setPair] = useState("AB");
+  const [adapters, setAdapters] = useState<AdapterInfo | null>(null);
+  const [sent, setSent] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    Promise.all([api("/api/auth/me"), api("/api/graph/entities?entity_type=Project&limit=60")])
-      .then(([meData, projectData]: [Me, Entity[]]) => {
+    Promise.all([
+      api("/api/auth/me"),
+      api("/api/graph/entities?entity_type=Project&limit=60"),
+      api("/api/generation/adapters"),
+    ])
+      .then(([meData, projectData, adapterData]: [Me, Entity[], AdapterInfo]) => {
         setMe(meData);
         setProjects(projectData);
+        setAdapters(adapterData);
         if (projectData.length) {
           setProjectSlug(projectData[0].key);
           setBrief(`Giới thiệu căn hộ tại dự án ${projectData[0].name}`);
@@ -135,6 +164,7 @@ export default function StudioPage() {
   async function run(configs: string[]) {
     setRunning(true);
     setError("");
+    setSent({});
     try {
       await loadEvidence();
       for (const config of configs) {
@@ -150,7 +180,7 @@ export default function StudioPage() {
             k: 6,
           }),
         });
-        if (config === "A") setGenA(result);
+        if (config === left) setGenA(result);
         else setGenB(result);
       }
     } catch (err) {
@@ -160,7 +190,26 @@ export default function StudioPage() {
     }
   }
 
+  /** Đưa một bản sinh vào vòng duyệt — từ đây nội dung thuộc quy trình người duyệt. */
+  async function sendToReview(gen: Generation | null) {
+    if (!gen) return;
+    setError("");
+    try {
+      const item = await api("/api/content", {
+        method: "POST",
+        body: JSON.stringify({ generation_id: gen.id }),
+      });
+      await api(`/api/content/${item.id}/submit`, { method: "POST" });
+      setSent((prev) => ({ ...prev, [gen.id]: item.id }));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Gửi duyệt thất bại");
+    }
+  }
+
   const canRun = me?.role === "admin" || me?.role === "marketer";
+  const { left, right } = PAIRS.find((p) => p.value === pair) ?? PAIRS[0];
+  const needsAdapter = left === "C" || right === "C" || right === "D";
+  const adapterReady = adapters?.ready ?? false;
 
   return (
     <main className="container" style={{ maxWidth: 1180 }}>
@@ -169,8 +218,10 @@ export default function StudioPage() {
       <div className="card">
         <h1>Content Studio</h1>
         <p className="hint">
-          A = prompt-only · B = RAG (cùng prompt, cùng model, cùng seed — chỉ khác khối dữ kiện
-          truy xuất). Mọi câu có số liệu đều được đối chiếu ngược về fact có nguồn.
+          Bốn cấu hình khác nhau đúng hai biến: có truy xuất hay không (A/C vs B/D) và có
+          adapter QLoRA hay không (A/B vs C/D). Cùng prompt, cùng seed, cùng decoding — nên
+          chênh lệch đo được quy về đúng biến đang xét. Mọi câu có số liệu đều được đối chiếu
+          ngược về fact có nguồn.
         </p>
         <div className="row">
           <div style={{ flex: 2, minWidth: 240 }}>
@@ -212,7 +263,7 @@ export default function StudioPage() {
             </select>
           </div>
           <div>
-            <label htmlFor="retrieval">Truy xuất (cho B)</label>
+            <label htmlFor="retrieval">Truy xuất</label>
             <select
               id="retrieval"
               value={retrievalConfig}
@@ -223,16 +274,35 @@ export default function StudioPage() {
               <option value="R2">R2 — graph only</option>
             </select>
           </div>
+          <div style={{ minWidth: 260 }}>
+            <label htmlFor="pair">Cặp so sánh</label>
+            <select id="pair" value={pair} onChange={(e) => setPair(e.target.value)}>
+              {PAIRS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+        {needsAdapter && (
+          <p className={adapterReady ? "hint" : "error"} style={{ marginTop: 4 }}>
+            {adapterReady
+              ? `Adapter QLoRA: ${adapters?.default || "(chọn trong request)"} — nền ${
+                  adapters?.adapters.find((a) => a.name === adapters?.default)?.base_model ?? "?"
+                }`
+              : `Chưa có adapter QLoRA nào trong ${adapters?.dir ?? "models/adapters"}. Cấu hình C/D chỉ chạy được sau khi copy adapter đã train về (xem training/README.md).`}
+          </p>
+        )}
         <label htmlFor="brief">Yêu cầu nội dung</label>
         <textarea id="brief" rows={2} value={brief} onChange={(e) => setBrief(e.target.value)} />
         {canRun && (
           <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={() => run(["A", "B"])} disabled={running}>
-              {running ? "Đang sinh…" : "Chạy A và B"}
+            <button onClick={() => run([left, right])} disabled={running}>
+              {running ? "Đang sinh…" : `Chạy ${left} và ${right}`}
             </button>
-            <button className="secondary" onClick={() => run(["B"])} disabled={running}>
-              Chỉ chạy B (RAG)
+            <button className="secondary" onClick={() => run([right])} disabled={running}>
+              Chỉ chạy {right}
             </button>
             <button className="secondary" onClick={() => loadEvidence().catch(() => undefined)}>
               Xem trước dữ kiện
@@ -248,28 +318,44 @@ export default function StudioPage() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
-        <div className="card" style={{ marginTop: 0 }}>
-          <h2>A — prompt-only</h2>
-          <p className="hint">Không có dữ kiện truy xuất.</p>
-          <Output gen={genA} />
-          {genA && (
-            <>
-              <h3 style={{ fontSize: 14, marginTop: 12 }}>Đối chiếu claim</h3>
-              <ClaimList claims={genA.claims} />
-            </>
-          )}
-        </div>
-        <div className="card" style={{ marginTop: 0 }}>
-          <h2>B — RAG ({retrievalConfig})</h2>
-          <p className="hint">{plan?.explain ?? "Có khối dữ kiện truy xuất kèm nguồn."}</p>
-          <Output gen={genB} />
-          {genB && (
-            <>
-              <h3 style={{ fontSize: 14, marginTop: 12 }}>Đối chiếu claim</h3>
-              <ClaimList claims={genB.claims} />
-            </>
-          )}
-        </div>
+        {[
+          { config: left, gen: genA, hint: "Không có dữ kiện truy xuất." },
+          {
+            config: right,
+            gen: genB,
+            hint: plan?.explain ?? "Có khối dữ kiện truy xuất kèm nguồn.",
+          },
+        ].map(({ config, gen, hint }) => (
+          <div className="card" style={{ marginTop: 0 }} key={config}>
+            <h2>
+              {CONFIG_LABELS[config]}
+              {(config === "B" || config === "D") && ` (${retrievalConfig})`}
+            </h2>
+            <p className="hint">
+              {config === "A" || config === "C" ? "Không có dữ kiện truy xuất." : hint}
+            </p>
+            <Output gen={gen} />
+            {gen && (
+              <>
+                <h3 style={{ fontSize: 14, marginTop: 12 }}>Đối chiếu claim</h3>
+                <ClaimList claims={gen.claims} />
+                {canRun && gen.status === "done" && (
+                  <div style={{ marginTop: 12 }}>
+                    {sent[gen.id] ? (
+                      <a className="src" href={`/review?item=${sent[gen.id]}`}>
+                        Đã gửi duyệt → mở trang duyệt
+                      </a>
+                    ) : (
+                      <button className="secondary" onClick={() => sendToReview(gen)}>
+                        Gửi duyệt bản {config}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ))}
       </div>
 
       <div className="card">

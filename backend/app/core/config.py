@@ -38,5 +38,11 @@ class Settings(BaseSettings):
     openai_base_url: str = ""
     prompt_version: str = "prompt_v1"
 
+    # QLoRA adapter cho cấu hình C/D (Tuần 5). Adapter do Hải train ở máy/Colab GPU rồi
+    # copy nguyên thư mục vào `adapter_dir`; backend tự nhận, không phải sửa code.
+    # Hợp đồng bàn giao: xem training/README.md.
+    adapter_dir: str = "models/adapters"
+    llm_adapter: str = ""  # tên thư mục adapter mặc định cho C/D; rỗng = chưa có
+
 
 settings = Settings()

@@ -29,3 +29,8 @@ DataBDS/data/
 
 # Artefact sinh ra khi chạy pipeline (dataset SFT, dump) — không đưa vào git
 backend/artifacts/
+
+# Trọng số LoRA adapter bàn giao từ máy train (vài chục MB/cái) — giữ ngoài git,
+# chỉ commit README mô tả hợp đồng. Xem training/README.md.
+backend/models/adapters/*
+!backend/models/adapters/README.txt

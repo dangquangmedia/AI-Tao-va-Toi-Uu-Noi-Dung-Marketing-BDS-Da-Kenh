@@ -1,14 +1,20 @@
-"""Sinh nội dung cấu hình A và B (Tuần 4, Plan/01 §5.1).
+"""Sinh nội dung cấu hình A–D (Tuần 4–5, Plan/01 §5.1).
 
-- **A — prompt-only:** chỉ brief + persona + kênh, không truy xuất gì.
-- **B — RAG:** thêm khối dữ kiện lấy từ knowledge base (R1/R2/R3) kèm nguồn.
+Ma trận thí nghiệm bắt buộc, khác nhau đúng **hai biến** — có retrieval hay không, có
+QLoRA adapter hay không:
 
-Hai cấu hình dùng **cùng prompt, cùng model, cùng seed, cùng decoding** (greedy) — chỉ
-khác khối context. Nhờ vậy chênh lệch đo được quy về đúng đóng góp của retrieval, đúng
-điều kiện so sánh của Plan/03 §2.
+| Cấu hình | Retrieval | Adapter QLoRA |
+|---|---|---|
+| **A** — prompt-only | không | không |
+| **B** — RAG | có | không |
+| **C** — QLoRA | không | có |
+| **D** — RAG + QLoRA | có | có |
 
-Mỗi lần chạy ghi một dòng `generations` với đủ context id, prompt hash, model, seed và
-kết quả chấm claim để tái lập và để dựng bảng A–D.
+Bốn cấu hình dùng **cùng prompt, cùng seed, cùng decoding** (greedy). Nhờ vậy chênh lệch
+đo được quy về đúng đóng góp của từng biến, đúng điều kiện so sánh của Plan/03 §2.
+
+Mỗi lần chạy ghi một dòng `generations` với đủ context id, prompt hash, model, adapter,
+seed và kết quả chấm claim để tái lập và để dựng bảng A–D.
 """
 
 import re
@@ -19,6 +25,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models import CleanListing, Fact, Generation
+from app.services.adapters import default_adapter_name, get_adapter
 from app.services.chunking import PREDICATE_LABELS, _format_price, value_label
 from app.services.claim_check import check_claims
 from app.services.llm import get_generator
@@ -28,8 +35,30 @@ from app.services.retrieval import retrieve_r1, retrieve_r2, retrieve_r3
 MAX_CONTEXT_CHUNKS = 6
 MAX_CONTEXT_FACTS = 24
 CHUNK_CHARS_IN_CONTEXT = 500
-CONFIG_A, CONFIG_B = "A", "B"
+CONFIG_A, CONFIG_B, CONFIG_C, CONFIG_D = "A", "B", "C", "D"
+CONFIGS = (CONFIG_A, CONFIG_B, CONFIG_C, CONFIG_D)
+# Hai biến của ma trận, tra bằng bảng thay vì rải if rải rác cho khỏi lệch nhau
+USES_RETRIEVAL = {CONFIG_A: False, CONFIG_B: True, CONFIG_C: False, CONFIG_D: True}
+USES_ADAPTER = {CONFIG_A: False, CONFIG_B: False, CONFIG_C: True, CONFIG_D: True}
 _PRICE_PREDICATES = {"total_price_vnd", "price_per_m2_vnd"}
+
+
+def resolve_adapter(config: str, adapter_name: str | None = None) -> dict | None:
+    """Adapter cho cấu hình C/D; A/B luôn chạy model gốc.
+
+    Ném lỗi *có hướng dẫn* nếu C/D được gọi khi chưa bàn giao adapter — đây là ca xảy ra
+    thường xuyên trong lúc Hải còn đang train.
+    """
+    if not USES_ADAPTER.get(config):
+        return None
+    name = adapter_name or default_adapter_name()
+    if not name:
+        raise FileNotFoundError(
+            f"Cấu hình {config} cần LoRA adapter nhưng chưa có adapter nào được bàn giao. "
+            "Copy thư mục adapter vào backend/models/adapters/ (xem training/README.md) "
+            "hoặc đặt LLM_ADAPTER=<tên> nếu có nhiều adapter."
+        )
+    return get_adapter(name)
 
 
 def _fact_line(fact: Fact) -> str:
@@ -148,13 +177,17 @@ def run_generation(
     project_slug: str | None = None,
     brand: dict | None = None,
     k: int = MAX_CONTEXT_CHUNKS,
+    adapter_name: str | None = None,
 ) -> Generation:
+    if config not in CONFIGS:
+        raise ValueError(f"Cấu hình không hợp lệ: {config} (phải là A, B, C hoặc D)")
     started = time.time()
     query = f"{project_slug or ''} {brief}".strip()
+    adapter = resolve_adapter(config, adapter_name)
 
     context = (
         assemble_context(db, tenant_id, query, retrieval_config, k)
-        if config == CONFIG_B
+        if USES_RETRIEVAL[config]
         else {
             "results": [],
             "facts": [],
@@ -174,12 +207,14 @@ def run_generation(
         brand=brand,
     )
 
-    generator = get_generator()
+    generator = get_generator(adapter)
     record = Generation(
         tenant_id=tenant_id,
         created_by=created_by,
         config=config,
-        retrieval_config=retrieval_config if config == CONFIG_B else "none",
+        retrieval_config=retrieval_config if USES_RETRIEVAL[config] else "none",
+        adapter_name=adapter["name"] if adapter else "",
+        adapter_fingerprint=adapter["fingerprint"] if adapter else "",
         channel=channel,
         persona=persona,
         project_slug=project_slug,
@@ -207,10 +242,10 @@ def run_generation(
         return record
 
     parsed = parse_output(response.text)
-    # Claim của cấu hình A cũng chấm trên facts truy xuất được cho cùng brief:
-    # A không "thấy" facts, nhưng để so sánh công bằng thì thước đo phải như nhau.
+    # Cấu hình không có retrieval (A, C) vẫn được chấm trên facts truy xuất được cho cùng
+    # brief: chúng không "thấy" facts, nhưng để so sánh công bằng thì thước đo phải như nhau.
     reference_facts = context["fact_payloads"]
-    if config == CONFIG_A:
+    if not USES_RETRIEVAL[config]:
         reference = assemble_context(db, tenant_id, query, "R3", k)
         reference_facts = reference["fact_payloads"]
 
@@ -224,6 +259,10 @@ def run_generation(
     record.latency_ms = int((time.time() - started) * 1000)
     record.metrics = {
         **{k2: v for k2, v in checked.items() if k2 != "claims"},
+        # Facts dùng làm chuẩn chấm claim. Với A/C (không truy xuất) đây không phải context
+        # của prompt mà là tập tham chiếu để so sánh công bằng — lưu lại để lúc người biên
+        # tập sửa nội dung còn chấm lại trên đúng tập fact đó.
+        "reference_fact_ids": [f["fact_id"] for f in reference_facts],
         "n_context_chunks": len(context["results"]),
         "n_context_facts": len(context["facts"]),
         "n_graph_paths": len(context["graph_paths"]),

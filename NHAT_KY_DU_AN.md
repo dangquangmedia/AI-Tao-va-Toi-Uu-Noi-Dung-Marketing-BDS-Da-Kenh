@@ -3,8 +3,8 @@
 > **File bắt đầu duy nhất cho phiên làm việc mới.** Khi mở lại dự án, hãy đọc file này trước. Chỉ mở các tài liệu hoặc mã nguồn được dẫn ở đây khi nhiệm vụ hiện tại thực sự cần chi tiết hơn.
 
 **Dự án:** AI tạo và tối ưu nội dung marketing BĐS đa kênh
-**Cập nhật gần nhất:** 29/07/2026 (sáng)
-**Trạng thái tổng thể:** Tuần 1–3 đã merge vào `main`; **Tuần 4 hoàn tất, kể cả baseline A/B** — RAG giảm tỷ lệ claim vô căn cứ **0,2042 → 0,0917 (−55%)**, tốt hơn ở cả 4/4 brief — BM25 tiếng Việt tự cài đưa nhánh lexical từ 0,090 lên 0,964 precision@10, R3 (RRF có trọng số + query router) đạt **precision 1,000 · recall 0,938 · MRR 1,000** trên 72 gold query; Content Studio 4 kênh + Evidence panel chạy thật với **Qwen2.5-3B-Instruct 4-bit trên GPU máy** (VRAM 2,1GB); mọi lần sinh được log đủ prompt hash/model/seed/context để tái lập. Nền tảng Tuần 3 giữ nguyên — knowledge base 9.656 chunk đã embed bằng **BAAI/bge-m3 chạy trên GPU**, FTS tiếng Việt + pgvector HNSW, entity resolution nâng lên 617 dự án, `dataset_v1` đóng băng với leakage audit **đạt**, 72 gold query, 1.500 mẫu SFT nháp, R1/R2 chạy thật (R1-vector precision@10 = 0,850 · R2-graph recall = 0,862), 81/81 tests pass. Còn thiếu duy nhất staging URL (chờ tài khoản cloud).
+**Cập nhật gần nhất:** 29/07/2026 (chiều)
+**Trạng thái tổng thể:** Tuần 1–4 đã merge vào `main`; **Tuần 5 xong phần không cần GPU** — ma trận A–D đủ bốn ô (C/D chỉ chờ adapter cắm vào), vòng duyệt nội dung đầy đủ (`/review`), gói training bàn giao cho Hải chạy Colab/máy GPU, dataset SFT xuất được 237 mẫu chất lượng cao. Tuần 4 trước đó: RAG giảm tỷ lệ claim vô căn cứ **0,2042 → 0,0917 (−55%)**, tốt hơn ở cả 4/4 brief — BM25 tiếng Việt tự cài đưa nhánh lexical từ 0,090 lên 0,964 precision@10, R3 (RRF có trọng số + query router) đạt **precision 1,000 · recall 0,938 · MRR 1,000** trên 72 gold query; Content Studio 4 kênh + Evidence panel chạy thật với **Qwen2.5-3B-Instruct 4-bit trên GPU máy** (VRAM 2,1GB); mọi lần sinh được log đủ prompt hash/model/seed/context để tái lập. Nền tảng Tuần 3 giữ nguyên — knowledge base 9.656 chunk đã embed bằng **BAAI/bge-m3 chạy trên GPU**, FTS tiếng Việt + pgvector HNSW, entity resolution nâng lên 617 dự án, `dataset_v1` đóng băng với leakage audit **đạt**, 72 gold query, 1.500 mẫu SFT nháp, R1/R2 chạy thật (R1-vector precision@10 = 0,850 · R2-graph recall = 0,862), 81/81 tests pass. Còn thiếu duy nhất staging URL (chờ tài khoản cloud).
 
 ---
 
@@ -49,6 +49,27 @@
 - **Lê Văn Quang:** hệ thống + tích hợp — backend/frontend, database, auth/RBAC/tenant, graph storage/traversal, hybrid retrieval, CI/CD, dashboard, deployment.
 - **Phạm Vũ Hải:** dữ liệu + mô hình — crawler/contract, làm sạch, SFT dataset, QLoRA, evaluation, vision data.
 
+## 5-0. Hợp đồng bàn giao QLoRA — đọc trước khi Hải train
+
+Quyết định 29/07 của Anh: **việc cần GPU giao cho Hải chạy máy khác hoặc Colab**, phần còn lại
+làm trước sao cho "gắn vào là chạy thông". Đã dựng xong điểm ghép:
+
+```
+máy có DB (Quang)                         máy GPU (Hải / Colab)
+  python -m app.sft_cli  ──train.jsonl──▶   python training/qlora_train.py
+                           validation.jsonl              │
+  backend/models/adapters/<tên>/  ◀── copy nguyên thư mục ┘
+      → cấu hình C/D chạy ngay, KHÔNG sửa code, KHÔNG migration
+```
+
+- Toàn bộ hướng dẫn cho Hải: `training/README.md` (kèm bảng lỗi thường gặp và cách xử lý).
+- Kiểm môi trường GPU trước khi tốn giờ: `python qlora_train.py --smoke` (~2 phút, dữ liệu giả).
+- Adapter phải kèm `adapter_card.json` — backbone, siêu tham số, dataset version, loss. Thiếu
+  card vẫn nạp được nhưng bị đánh dấu "không dùng cho số liệu báo cáo".
+- **Backbone lấy từ card, không lấy từ cấu hình backend.** Nạp adapter lên sai base model thì
+  transformers không báo lỗi mà sinh văn rác — đã chặn bằng code.
+- Chưa có adapter mà chạy C/D thì API trả 400 kèm hướng dẫn, Studio hiện cảnh báo ngay.
+
 ## 5a. Kết quả baseline A/B (chạy xong 29/07)
 
 4 brief lấy từ dự án thuộc split test × 2 cấu hình, `Qwen2.5-1.5B-Instruct` fp16 trên GPU máy, greedy + seed 42, retrieval R3 với k = 3:
@@ -70,19 +91,36 @@ Bảng chi tiết: `docs/checkpoints/week_04_ab_baseline.md`; phân tích: `week
 
 **Chưa làm, cố ý bỏ qua:** chạy lại toàn bộ pipeline theo `reparse_v2`. Ảnh chụp DB hiện tại vẫn là bản **trước** `reparse_v2`, tức 31 tin phòng ngủ phi lý vẫn còn trong dữ liệu đang chạy; luật chặn đã có trong code, chỉ chờ lần rebuild kế tiếp (khoảng 15 phút GPU). **Phải ghi rõ điều này nếu trích số liệu từ DB hiện tại.**
 
-## 5. Việc cần làm tiếp theo (đầu Tuần 5)
+## 5. Việc cần làm tiếp theo (đầu Tuần 6)
 
-1. **Chốt GPU thuê ≥12GB cho QLoRA** — việc gấp nhất. GTX 1650 Ti 4GB chỉ đủ embedding và sinh nội dung model nhỏ (1.5B fp16 ~50–107 giây/bài), không đủ fine-tune 7–8B.
+1. **Hải train adapter đầu tiên rồi bàn giao** — theo `training/README.md`, chạy `--smoke` kiểm môi trường trước. Đây là thứ duy nhất còn thiếu để cấu hình C/D có số thật.
 2. **Chọn nền tảng cloud + cấp tài khoản** → deploy staging (carry-over từ Tuần 1, vẫn chưa xong).
-3. Hải: soát tay 72 gold query **và viết thêm bộ câu hỏi khó không nêu tên dự án** — bộ hiện tại đều nêu tên nên R3 đạt precision 1,000, chưa phản ánh ca thật (giải thích ở `week_04_report.md` §1.4).
-4. Pilot 2–3 backbone → chốt model chính thức (Plan/03 §3); QLoRA main run → cấu hình C.
-5. Reviewer flow: duyệt/từ chối/version/export (gate Tuần 5).
-6. Hải: biến 1.500 mẫu SFT nháp thành gold/silver đã review để train được.
-7. Chốt danh sách human rater (Plan/03 §5) — không để trễ tới Tuần 6.
+3. **Quyết định về mô tả bị cắt cụt** (mục 5c) — crawl lại hay hạ kỳ vọng độ dài; phải chốt trước khi train thật.
+4. Hải: soát tay 72 gold query **và viết thêm bộ câu hỏi khó không nêu tên dự án** — bộ hiện tại đều nêu tên nên R3 đạt precision 1,000, chưa phản ánh ca thật (giải thích ở `week_04_report.md` §1.4).
+5. Chạy frozen A–D + R1–R3, dựng dashboard so sánh (gate Tuần 6).
+6. Chốt danh sách human rater (Plan/03 §5) — đã trễ so với dự kiến Tuần 3.
+7. Tích lũy nội dung đã duyệt trong `/review` để có mẫu SFT cho 3 kênh còn lại.
 
-Chi tiết + cách chạy local: `docs/checkpoints/week_01_report.md` → `week_04_report.md`.
+Chi tiết + cách chạy local: `docs/checkpoints/week_01_report.md` → `week_05_report.md`.
 
-## 5b. Bài học kỹ thuật của Tuần 4 (giữ lại để viết báo cáo)
+## 5c. Mô tả trong DataBDS bị crawler cắt cụt — cần Hải quyết
+
+Đo trên 4.795 tin raw: trung vị **166 ký tự**, p90 = 244, chỉ **228 tin (4,8%) đạt ≥300 ký tự**, nhiều bản đứt giữa câu (`"...Nam Tư: 0772 011 Zalo Hỗ trợ xem nhà nhanh"`). Crawler lấy đoạn preview chứ không lấy thân tin đầy đủ.
+
+Hệ quả: kênh `description` yêu cầu 180–260 **từ**, mẫu train chỉ ~30 từ. Model học được cách gắn dữ kiện và văn phong nhưng **không học được độ dài**. Ba hướng: (1) Hải crawl lại trường mô tả — sửa tận gốc; (2) giữ nguyên và hạ kỳ vọng, ghi rõ giới hạn trong báo cáo; (3) dồn vào nguồn nội dung đã duyệt. Khuyến nghị làm (1) nếu crawler còn chạy được, (2) làm nền để không chặn tiến độ.
+
+Số liệu đầy đủ: `week_05_report.md` §4.
+
+## 5b. Bài học kỹ thuật (giữ lại để viết báo cáo)
+
+**Tuần 5:**
+
+- **Adapter nạp lên sai backbone không báo lỗi — nó sinh văn rác.** Vì vậy backbone được lấy từ `adapter_card.json` chứ không từ cấu hình backend. Loại sai lầm im lặng thì phải chặn bằng code, không chặn bằng quy ước.
+- **Claim checker dùng được làm bộ lọc dữ liệu train.** Mô tả người đăng thường chứa số không có trong facts; train nguyên xi lên đó là dạy model bịa số. Lọc bằng chính công cụ đo giữ lại 237/3.191 mẫu sạch — công cụ đo và công cụ làm sạch là một.
+- **Chống bịa số phải chặn cả người, không chỉ model.** Bản sửa tay được chấm lại claim trên đúng tập fact của lần sinh gốc; thử thêm "Giá bán 999 tỷ, chiết khấu 45%" thì hệ thống bắt đúng hai số.
+- **Tách nhật ký thí nghiệm khỏi sản phẩm làm việc.** `generations` bất biến (ghi cả lần hỏng) để tái lập; `content_versions` sửa được, nhiều phiên bản. Trộn một bảng thì mất một trong hai.
+
+**Tuần 4:**
 
 - **Negative result Tuần 3 có nguyên nhân cụ thể, không phải lỗi của RRF.** Nhánh lexical `ts_rank_cd` thiếu IDF và cắt sai từ tiếng Việt. Thay bằng BM25 tự cài (IDF thật + bigram âm tiết) → 0,090 lên 0,964; RRF có trọng số → 0,981. Cả hai số đều đo trên cùng 72 gold query.
 - **Router phải áp bộ lọc cho *mọi* nhánh.** Bản đầu chỉ lọc bm25/vector, để graph kéo dự án hàng xóm 2-hop vào nên kém hơn trọng số cố định (0,824 < 0,899); sau khi graph cũng tôn trọng `allowed_projects` thì đạt 1,000.
@@ -123,15 +161,21 @@ Nếu trễ, cắt theo thứ tự: DPO → ablation D+V+R → video/đa ngôn n
 | 28/07/2026 | Chặn dữ liệu phi lý phát hiện qua UI | `reparse_v2`: bedrooms/bathrooms 1–20, area 5–10.000 m² | Loại 31 tin > 20 phòng ngủ (max 92) và 30 tin > 20 phòng tắm (max 675) |
 | 29/07/2026 | **Baseline A vs B** | `docs/checkpoints/week_04_ab_baseline.md` — 4 brief × 2 cấu hình, Qwen2.5-1.5B fp16 trên GPU | Claim vô căn cứ **0,2042 → 0,0917 (−55%)**; B thắng 4/4 brief; n = 4 nên chưa kiểm định thống kê |
 | 29/07/2026 | Tái lập được kết quả sinh | Hai lượt chạy cách nhau 10,5 giờ, cùng `prompt_hash dddc1d863e7c`, seed 42 | Raw output **trùng khít từng byte** (SHA-256 `0156f6a9…`) |
+| 29/07/2026 | **Tuần 5 — điểm ghép QLoRA + vòng duyệt** | Migration `804d7f4deca9`; 131/131 tests; `week_05_report.md` | Ma trận A–D đủ 4 ô; `/review` chạy E2E trên trình duyệt; adapter contract có 3 lớp bảo vệ |
+| 29/07/2026 | Gói training bàn giao Hải | `training/` — `qlora_train.py`, README hợp đồng, requirements, notebook Colab | Độc lập hoàn toàn với backend; có `--smoke` kiểm môi trường GPU trước |
+| 29/07/2026 | Dataset SFT sẵn sàng train | `python -m app.sft_cli` trên `dataset_v1` | **237 mẫu** (191 train · 46 val · 130 dự án) sau khi lọc bằng claim checker; loại 2.155 tin vì chứa số không có trong facts |
+| 29/07/2026 | Phát hiện mô tả nguồn bị cắt cụt | Đo 4.795 tin raw: trung vị 166 ký tự, chỉ 4,8% đạt ≥300 | Mẫu SFT ngắn hơn yêu cầu kênh → cần Hải quyết (mục 5c) |
 | 28/07/2026 | Đánh giá retrieval R1/R2 | `docs/checkpoints/week_03_retrieval_eval.md` | R1-vector precision@10 **0,850** · MRR 0,921; R2-graph recall **0,862**; R1-fts chỉ 0,087 và RRF không trọng số kém hơn vector → cần BM25 + RRF có trọng số ở Tuần 4 |
 
 ## 9. Blocker và câu hỏi mở
 
 | Mức độ | Vấn đề | Owner | Hành động tiếp theo |
 |---|---|---|---|
-| Cao | **Chưa có GPU đủ cho QLoRA Tuần 5** | Quang + Hải | GTX 1650 Ti 4GB chỉ chạy được embedding + sinh model nhỏ; QLoRA 7–8B cần ≥12GB → thuê giờ (Colab Pro/vast.ai/Kaggle), pilot backbone nhỏ để dự phòng |
+| Cao | **Chưa có adapter QLoRA thật** — C/D mới chứng minh được đường đi | Hải | Train ở máy GPU/Colab theo `training/README.md`, copy thư mục về `backend/models/adapters/`. Hạ tầng phía backend đã xong (mục 5-0) |
 | Cao | **Chưa có staging URL** (carry-over từ Tuần 1) | Quang | Cần Anh chọn nền tảng cloud + cấp tài khoản; deploy ngay sau đó |
-| Trung bình | Gold query đều nêu tên dự án → precision 1,000 chưa phản ánh ca khó | Hải | Viết thêm bộ câu hỏi không nêu tên dự án ở Tuần 5 |
+| Cao | **Mô tả nguồn bị crawler cắt cụt** (trung vị 166 ký tự) | Hải + Anh | Crawl lại trường mô tả, hoặc hạ kỳ vọng độ dài và ghi rõ trong báo cáo — mục 5c |
+| Trung bình | Mẫu SFT mới có 237, dưới mục tiêu 800–1.500 | Hải | Nới ngưỡng lọc có kiểm soát + tích lũy nội dung đã duyệt trong `/review` |
+| Trung bình | Gold query đều nêu tên dự án → precision 1,000 chưa phản ánh ca khó | Hải | Viết thêm bộ câu hỏi không nêu tên dự án |
 | Trung bình | Baseline A/B mới có **n = 4 brief** — chưa đủ kiểm định thống kê | Hải + Quang | Frozen test 40–60 brief + human eval mù, chạy trên GPU thuê (Tuần 5–6) |
 | Trung bình | Ảnh chụp DB đang chạy vẫn là bản **trước `reparse_v2`** | Quang | Chạy `pipeline_cli --rebuild` → `index_cli` → `dataset_cli --build --eval` (~15 phút GPU) trước khi lấy số liệu cuối |
 | ~~Trung bình~~ | ~~R1-fts yếu (precision 0,086) kéo RRF xuống dưới vector~~ — **đã xử lý ở Tuần 4** | Quang | BM25 tự cài + RRF có trọng số → 0,964 / 0,981 |
@@ -144,16 +188,17 @@ Nếu trễ, cắt theo thứ tự: DPO → ablation D+V+R → video/đa ngôn n
 
 ## Current State & Hand-off
 
-- 29/07/2026: xong Tuần 1–4, tất cả đã ở `main` (Tuần 4 làm trên branch `tuan-04-baseline-ab` rồi merge).
-- Code hiện có: `backend/` (FastAPI + SQLAlchemy + Alembic; auth/RBAC/tenant, ingestion raw, pipeline D1–D5, facts + graph ≤2 hop, chunking/FTS/embedding, **BM25 tự cài**, retrieval R1–R3 + query router, dataset split + gold query + SFT builder, **model gateway + prompt có version + claim check + logging generations**) · `frontend/` (Next.js 15: login, `/projects`, `/data`, `/graph`, `/search`, `/studio`, `/dataset`).
+- 29/07/2026: xong Tuần 1–5 (Tuần 5 trừ phần cần GPU), tất cả đã ở `main`.
+- Code hiện có: `backend/` (FastAPI + SQLAlchemy + Alembic; auth/RBAC/tenant, ingestion raw, pipeline D1–D5, facts + graph ≤2 hop, chunking/FTS/embedding, **BM25 tự cài**, retrieval R1–R3 + query router, dataset split + gold query + SFT builder + **SFT export sẵn sàng train**, model gateway + prompt có version + claim check + logging generations, **adapter registry + cấu hình C/D**, **vòng duyệt nội dung**) · `frontend/` (Next.js 15: login, `/projects`, `/data`, `/graph`, `/search`, `/studio`, `/review`, `/dataset`) · `training/` (gói QLoRA độc lập cho máy GPU).
 - Dữ liệu trên PostgreSQL local (`docker compose up -d`): 4.795 tin raw · 4.794 tin sạch · 31.167 facts · graph 1.941 node / 2.653 cạnh · 9.656 chunk đã embed bằng `BAAI/bge-m3` · `dataset_v1` đã đóng băng · 72 gold query · 1.500 mẫu SFT nháp.
 - Lệnh hay dùng (chạy trong `backend/`):
   - `python -m app.pipeline_cli --rebuild --report ..\docs\checkpoints\week_02_data_quality.md` — chạy lại D1–D5 khi đổi luật parser
   - `python -m app.index_cli` — chunk + FTS + embed bge-m3 trên GPU (~9 phút cho 9.656 chunk)
   - `python -m app.dataset_cli --build --eval --sweep` — split + gold query + SFT + data card + bảng R1–R3 + sweep trọng số
   - `python -m app.ab_cli --briefs 4 --k 3 --max-new-tokens 200` — chạy baseline A/B trên GPU (mỗi bài 3–6 phút)
+  - `python -m app.sft_cli --out artifacts\sft` — xuất `train.jsonl`/`validation.jsonl` + thẻ dataset để mang sang máy GPU
   - Máy không GPU: thêm `--backend hashing` (index) và `--provider template` (sinh nội dung) — chỉ để pipeline chạy, **không dùng cho số liệu báo cáo**. Test tự động luôn chạy ở chế độ này (`tests/conftest.py`).
 - Phụ thuộc nặng (torch/transformers/bitsandbytes/sentence-transformers) nằm ở `backend/requirements-ml.txt`, tách khỏi `requirements.txt` để CI không phải tải model.
 - Môi trường: backend cổng **8001** (cổng 8000 bị `latcat.exe` chiếm), frontend 3000, tài khoản demo `admin@cancu.demo` / `cancu123`. GPU: GTX 1650 Ti 4GB, torch 2.6.0+cu124, CUDA hoạt động.
-- Việc đầu tiên phiên tới: Tuần 5 theo `Plan/01` §6 — pilot backbone + QLoRA (cấu hình C) + reviewer flow; **chốt GPU thuê trước khi bắt đầu**. Xem mục 5.
+- Việc đầu tiên phiên tới: Tuần 6 theo `Plan/01` §6 — chạy frozen A–D + R1–R3 và dựng dashboard so sánh. **Cần adapter của Hải trước** (mục 5-0) thì C/D mới có số; nếu chưa có thì làm trước phần dashboard + hard set gold query. Xem mục 5.
 - Nhớ bật `docker compose up -d` trước mọi lệnh CLI — batch tối 28/07 chết vì Docker tắt trước tiến trình Python.
