@@ -176,11 +176,12 @@ class GenerateIn(BaseModel):
     brief: str = Field(min_length=5, max_length=1000)
     channel: str = Field(pattern=r"^(description|facebook|email|landing_seo)$")
     persona: str = Field(pattern=r"^(young_family|investor|first_home)$")
-    config: str = Field(default="B", pattern=r"^(A|B)$")
+    config: str = Field(default="B", pattern=r"^(A|B|C|D)$")
     retrieval_config: str = Field(default="R3", pattern=r"^(R1|R2|R3)$")
     project_slug: str | None = None
     brand: dict | None = None
     k: int = Field(default=6, ge=1, le=20)
+    adapter: str | None = None  # C/D: tên adapter QLoRA; None = lấy mặc định
 
 
 class GenerationOut(BaseModel):
@@ -196,6 +197,8 @@ class GenerationOut(BaseModel):
     model_name: str
     provider: str
     seed: int
+    adapter_name: str
+    adapter_fingerprint: str
     context_chunk_ids: list
     context_fact_ids: list
     graph_paths: list
@@ -211,3 +214,62 @@ class GenerationOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ContentCreateIn(BaseModel):
+    generation_id: str
+    title: str = Field(default="", max_length=300)
+
+
+class ContentEditIn(BaseModel):
+    headline: str = Field(default="", max_length=300)
+    body: str = Field(min_length=1)
+    cta: str = Field(default="", max_length=300)
+
+
+class ContentReviewIn(BaseModel):
+    approve: bool
+    note: str = Field(default="", max_length=1000)
+
+
+class ContentVersionOut(BaseModel):
+    id: str
+    version_no: int
+    generation_id: str | None
+    config: str
+    model_name: str
+    adapter_name: str
+    prompt_version: str
+    headline: str
+    body: str
+    cta: str
+    edited_by_human: bool
+    claims: list
+    metrics: dict
+    status: str
+    review_note: str
+    reviewed_by: str | None
+    reviewed_at: datetime | None
+    created_by: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ContentItemOut(BaseModel):
+    id: str
+    project_slug: str | None
+    channel: str
+    persona: str
+    title: str
+    status: str
+    current_version: int
+    created_by: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ContentDetailOut(ContentItemOut):
+    versions: list[ContentVersionOut] = []

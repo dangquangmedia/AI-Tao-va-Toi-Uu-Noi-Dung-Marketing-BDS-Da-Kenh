@@ -37,8 +37,12 @@ class TemplateGenerator:
     Giữ đúng hình dạng đầu ra (headline/body/cta) để pipeline phía sau test được.
     """
 
-    name = "template-v1"
     provider = TEMPLATE_PROVIDER
+
+    def __init__(self, adapter_name: str = "") -> None:
+        # Cấu hình C/D chạy ở chế độ template (test/CI) vẫn ghi tên adapter vào log để
+        # không nhầm với A/B; trọng số thì đương nhiên không được nạp.
+        self.name = f"template-v1+{adapter_name}" if adapter_name else "template-v1"
 
     def generate(self, system: str, user: str, max_new_tokens: int = 512, seed: int = 42) -> LlmResponse:
         started = time.time()
@@ -65,17 +69,32 @@ class TemplateGenerator:
 
 
 class LocalTransformersGenerator:
-    """Model mở chạy tại chỗ. Ưu tiên 4-bit (bitsandbytes) để vừa GPU 4GB."""
+    """Model mở chạy tại chỗ. Ưu tiên 4-bit (bitsandbytes) để vừa GPU 4GB.
+
+    Nạp thêm được **LoRA adapter** (cấu hình C/D): base model giữ nguyên, chỉ chồng
+    trọng số adapter lên — đúng cách QLoRA phục vụ, và cho phép đổi adapter mà không
+    tải lại backbone.
+    """
 
     provider = LOCAL_PROVIDER
 
-    def __init__(self, model_name: str, device: str, load_in_4bit: bool, max_new_tokens: int) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        device: str,
+        load_in_4bit: bool,
+        max_new_tokens: int,
+        adapter_path: str | None = None,
+        adapter_name: str = "",
+    ) -> None:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
         if device == "auto":
             device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.name = model_name
+        self.name = f"{model_name}+{adapter_name}" if adapter_name else model_name
+        self.base_model_name = model_name
+        self.adapter_name = adapter_name
         self.device = device
         self.default_max_new_tokens = max_new_tokens
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -94,6 +113,10 @@ class LocalTransformersGenerator:
         self.model = AutoModelForCausalLM.from_pretrained(model_name, **kwargs)
         if "quantization_config" not in kwargs:
             self.model = self.model.to(device)
+        if adapter_path:
+            from peft import PeftModel
+
+            self.model = PeftModel.from_pretrained(self.model, adapter_path, is_trainable=False)
         self.model.eval()
 
     def generate(self, system: str, user: str, max_new_tokens: int | None = None, seed: int = 42) -> LlmResponse:
@@ -174,21 +197,36 @@ class OpenAiGenerator:
 _cache: dict[tuple, object] = {}
 
 
-def get_generator():
-    """Trả generator theo cấu hình hiện hành (cache theo provider+model)."""
-    key = (settings.llm_provider, settings.llm_model)
+def get_generator(adapter: dict | None = None):
+    """Trả generator theo cấu hình hiện hành (cache theo provider + model + adapter).
+
+    `adapter` là bản mô tả lấy từ `services/adapters.py`. Khi có adapter, **backbone lấy
+    theo adapter** chứ không theo `settings.llm_model`: adapter chỉ đúng với đúng base
+    model nó được train, nạp lệch sẽ ra output rác mà không báo lỗi.
+    """
+    if adapter and settings.llm_provider not in (LOCAL_PROVIDER, TEMPLATE_PROVIDER):
+        raise ValueError(
+            f"Provider '{settings.llm_provider}' không nạp được LoRA adapter — "
+            "cấu hình C/D phải chạy bằng model mở tại chỗ (llm_provider=local)"
+        )
+    adapter_name = adapter["name"] if adapter else ""
+    base_model = adapter.get("base_model") if adapter else None
+    model_name = base_model or settings.llm_model
+    key = (settings.llm_provider, model_name, adapter_name)
     if key in _cache:
         return _cache[key]
 
     provider = settings.llm_provider
     if provider == TEMPLATE_PROVIDER:
-        generator = TemplateGenerator()
+        generator = TemplateGenerator(adapter_name)
     elif provider == LOCAL_PROVIDER:
         generator = LocalTransformersGenerator(
-            settings.llm_model,
+            model_name,
             settings.llm_device,
             settings.llm_load_in_4bit,
             settings.llm_max_new_tokens,
+            adapter_path=adapter["path"] if adapter else None,
+            adapter_name=adapter_name,
         )
     elif provider == "openai":
         if not settings.openai_api_key:

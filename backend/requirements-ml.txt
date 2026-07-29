@@ -8,3 +8,6 @@ transformers==4.48.0
 accelerate==1.2.1
 bitsandbytes==0.45.0
 sentencepiece==0.2.0
+# peft: nạp LoRA adapter cho cấu hình C/D. Backend chỉ *nạp* adapter, việc huấn luyện
+# chạy ở máy GPU khác bằng `training/requirements-train.txt`.
+peft==0.14.0

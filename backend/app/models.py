@@ -413,6 +413,10 @@ class Generation(Base):
     model_name: Mapped[str] = mapped_column(String(120), default="")
     provider: Mapped[str] = mapped_column(String(30), default="")
     seed: Mapped[int] = mapped_column(Integer, default=0)
+    # Cấu hình C/D: adapter QLoRA đã dùng. Fingerprint là SHA-256 file trọng số — cùng
+    # tên adapter nhưng train lại thì fingerprint đổi, nên số cũ không bị lẫn với số mới.
+    adapter_name: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    adapter_fingerprint: Mapped[str] = mapped_column(String(32), default="", server_default="")
 
     context_chunk_ids: Mapped[list] = mapped_column(JSON, default=list)
     context_fact_ids: Mapped[list] = mapped_column(JSON, default=list)
@@ -429,4 +433,71 @@ class Generation(Base):
     latency_ms: Mapped[int] = mapped_column(Integer, default=0)
     status: Mapped[str] = mapped_column(String(20), default="done")  # done | failed
     error: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+CONTENT_STATUSES = ("draft", "in_review", "approved", "rejected")
+
+
+class ContentItem(Base):
+    """Một nội dung marketing đi qua vòng biên tập → duyệt → xuất bản (Tuần 5).
+
+    Tách khỏi `generations` có chủ đích: `generations` là **nhật ký thí nghiệm** (mọi
+    lần chạy, kể cả hỏng, không bao giờ sửa), còn bảng này là **sản phẩm làm việc** của
+    người dùng — sửa được, có nhiều phiên bản, có người duyệt. Trộn hai thứ vào một bảng
+    thì hoặc mất tính bất biến của log, hoặc không biên tập được.
+    """
+
+    __tablename__ = "content_items"
+    __table_args__ = (Index("ix_content_items_tenant_status", "tenant_id", "status"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(32), ForeignKey("tenants.id"), index=True)
+    project_slug: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    channel: Mapped[str] = mapped_column(String(20))
+    persona: Mapped[str] = mapped_column(String(20))
+    title: Mapped[str] = mapped_column(String(300), default="")
+    status: Mapped[str] = mapped_column(String(20), default="draft")  # xem CONTENT_STATUSES
+    current_version: Mapped[int] = mapped_column(Integer, default=0)
+    created_by: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+
+class ContentVersion(Base):
+    """Một phiên bản nội dung. Version **không bao giờ bị sửa** — sửa thì tạo bản mới.
+
+    Nhờ vậy luôn trả lời được "bản đã duyệt hôm đó là bản nào, do model nào sinh, người
+    nào biên tập" — yêu cầu review/version/export của Plan/01 §3.
+    """
+
+    __tablename__ = "content_versions"
+    __table_args__ = (
+        UniqueConstraint("content_item_id", "version_no", name="uq_content_version_no"),
+        Index("ix_content_versions_tenant", "tenant_id", "content_item_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(32), ForeignKey("tenants.id"), index=True)
+    content_item_id: Mapped[str] = mapped_column(String(32), ForeignKey("content_items.id"), index=True)
+    version_no: Mapped[int] = mapped_column(Integer)
+    # Nguồn gốc: version sinh bằng model thì trỏ về đúng dòng nhật ký thí nghiệm
+    generation_id: Mapped[str | None] = mapped_column(String(32), ForeignKey("generations.id"), nullable=True)
+    config: Mapped[str] = mapped_column(String(4), default="")  # A | B | C | D | "" nếu người viết tay
+    model_name: Mapped[str] = mapped_column(String(120), default="")
+    adapter_name: Mapped[str] = mapped_column(String(120), default="")
+    prompt_version: Mapped[str] = mapped_column(String(30), default="")
+
+    headline: Mapped[str] = mapped_column(Text, default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    cta: Mapped[str] = mapped_column(Text, default="")
+    edited_by_human: Mapped[bool] = mapped_column(default=False)
+    claims: Mapped[list] = mapped_column(JSON, default=list)
+    metrics: Mapped[dict] = mapped_column(JSON, default=dict)
+
+    status: Mapped[str] = mapped_column(String(20), default="draft")  # draft|in_review|approved|rejected
+    review_note: Mapped[str] = mapped_column(Text, default="")
+    reviewed_by: Mapped[str | None] = mapped_column(String(32), ForeignKey("users.id"), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
