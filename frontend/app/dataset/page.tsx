@@ -27,7 +27,12 @@ type Summary = {
     leaking_projects: string[];
     passed: boolean;
   };
-  gold_queries: { total: number; by_type: Record<string, number>; needs_review: number };
+  gold_queries: {
+    total: number;
+    by_type: Record<string, number>;
+    by_difficulty: Record<string, number>;
+    needs_review: number;
+  };
 };
 type Fact = {
   id: string;
@@ -44,9 +49,11 @@ type Fact = {
 type GoldQuery = {
   id: string;
   query_type: string;
+  difficulty: string;
   question: string;
   project_slug: string | null;
   expected_listing_ids: string[];
+  expected_projects: string[];
   needs_review: boolean;
 };
 
@@ -59,20 +66,22 @@ export default function DatasetPage() {
   const [facts, setFacts] = useState<Fact[]>([]);
   const [queries, setQueries] = useState<GoldQuery[]>([]);
   const [edited, setEdited] = useState<Record<string, string>>({});
+  const [difficulty, setDifficulty] = useState("");
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
+    const suffix = difficulty ? `&difficulty=${difficulty}` : "";
     const [meData, summaryData, factData, queryData] = await Promise.all([
       api("/api/auth/me"),
       api("/api/dataset/summary"),
       api("/api/dataset/facts/review?limit=20"),
-      api("/api/dataset/queries?limit=12"),
+      api(`/api/dataset/queries?limit=12${suffix}`),
     ]);
     setMe(meData);
     setSummary(summaryData);
     setFacts(factData);
     setQueries(queryData);
-  }, []);
+  }, [difficulty]);
 
   useEffect(() => {
     load().catch(() => router.push("/"));
@@ -176,7 +185,9 @@ export default function DatasetPage() {
         <h2>Gold retrieval queries ({summary?.gold_queries.total ?? 0})</h2>
         <p className="hint">
           Sinh bằng template trên split test, nhãn suy ra tất định từ DB.{" "}
-          {summary?.gold_queries.needs_review ?? 0} câu đang chờ soát tay trước khi khóa benchmark.
+          {summary?.gold_queries.needs_review ?? 0} câu đang chờ soát tay trước khi khóa benchmark.{" "}
+          Bộ <b>không nêu tên dự án</b> ({summary?.gold_queries.by_difficulty?.hard ?? 0} câu) đo năng
+          lực tìm kiếm thật; bộ nêu tên chủ yếu đo khả năng nhận diện tên.
         </p>
         <p>
           {summary &&
@@ -186,6 +197,18 @@ export default function DatasetPage() {
               </span>
             ))}
         </p>
+        <div className="row" style={{ gap: 8, marginBottom: 12 }}>
+          {["", "standard", "hard"].map((level) => (
+            <button
+              key={level || "all"}
+              className={difficulty === level ? "" : "secondary"}
+              style={{ marginTop: 0 }}
+              onClick={() => setDifficulty(level)}
+            >
+              {level === "" ? "Tất cả" : level === "standard" ? "Nêu tên dự án" : "Không nêu tên dự án"}
+            </button>
+          ))}
+        </div>
         <table>
           <thead>
             <tr>
@@ -199,10 +222,17 @@ export default function DatasetPage() {
             {queries.map((q) => (
               <tr key={q.id}>
                 <td>
-                  <span className="chip mute">{q.query_type}</span>
+                  <span className={q.difficulty === "hard" ? "chip warn" : "chip mute"}>
+                    {q.query_type}
+                  </span>
                 </td>
                 <td>{q.question}</td>
-                <td>{q.project_slug ?? "—"}</td>
+                <td>
+                  {q.project_slug ??
+                    (q.expected_projects.length
+                      ? `${q.expected_projects.length} dự án`
+                      : "—")}
+                </td>
                 <td>{q.expected_listing_ids.length}</td>
               </tr>
             ))}

@@ -19,6 +19,10 @@ INTENT_FACT = "fact"
 INTENT_TEMPORAL = "temporal"
 INTENT_GENERAL = "general"
 
+# Hai chế độ truy xuất, khác nhau ở chỗ câu hỏi có nêu tên dự án hay không.
+MODE_TARGETED = "targeted"  # có tên dự án → lọc theo dự án, trọng số theo ý định
+MODE_DISCOVERY = "discovery"  # không tên dự án → tìm theo mô tả, trọng số riêng
+
 # Từ khóa đã bỏ dấu để khớp bất kể người dùng gõ có dấu hay không
 _RELATION_HINTS = (
     "toa nao", "thuoc", "nam o", "quan nao", "phuong nao", "khu vuc", "gan ",
@@ -42,6 +46,13 @@ INTENT_WEIGHTS = {
     INTENT_GENERAL: {"vector": 1.0, "bm25": 0.6, "graph": 0.4},
 }
 FACT_CHUNK_INTENTS = (INTENT_FACT, INTENT_TEMPORAL)
+
+# Trọng số cho câu hỏi **không nêu tên dự án** — chốt bằng sweep trên 36 câu hỏi mô tả
+# (bảng trong docs/checkpoints/week_06_retrieval_eval.md). Bằng chứng Tuần 6: ở dạng câu
+# hỏi này nhánh graph mạnh hơn hẳn (project precision 0,465) còn bm25 sụp (0,115) vì các
+# từ trong câu ("căn hộ", "Quận 7", "3 tỷ") có mặt ở hàng nghìn tin, không phân biệt được
+# tin nào. Trọng số cố định của cấu hình targeted vì thế sai chỗ ở đây.
+DISCOVERY_WEIGHTS = {"vector": 1.0, "bm25": 0.3, "graph": 0.9}
 
 
 def classify_intent(query: str) -> str:
@@ -72,10 +83,14 @@ def route(db: Session, tenant_id: str, query: str) -> dict:
 
     project_slug = projects[0].canonical_key if len(projects) == 1 else None
     allowed_projects = [e.canonical_key for e in projects]
-    weights = dict(INTENT_WEIGHTS[intent])
+    # Không nhận ra dự án nào ⇒ câu hỏi mô tả (tìm theo thuộc tính/khu vực/ngân sách).
+    # Ý định vẫn giữ nguyên để giải thích được, nhưng trọng số lấy bộ discovery.
+    mode = MODE_TARGETED if projects else MODE_DISCOVERY
+    weights = dict(INTENT_WEIGHTS[intent] if mode == MODE_TARGETED else DISCOVERY_WEIGHTS)
 
     return {
         "intent": intent,
+        "mode": mode,
         "weights": weights,
         "project_slug": project_slug,
         # Mọi nhánh (kể cả graph) phải tôn trọng danh sách này. Bỏ qua bước đó là lý do
@@ -87,7 +102,11 @@ def route(db: Session, tenant_id: str, query: str) -> dict:
         "prefer_chunk_types": ["facts"] if intent in FACT_CHUNK_INTENTS else [],
         "explain": (
             f"Ý định: {intent}"
-            + (f" · dự án nhận diện: {project_slug}" if project_slug else "")
+            + (
+                f" · dự án nhận diện: {project_slug}"
+                if project_slug
+                else " · không nêu tên dự án → tìm theo mô tả"
+            )
             + (f" · {len(projects)} dự án được nhắc" if len(projects) > 1 else "")
             + f" · trọng số {weights}"
         ),

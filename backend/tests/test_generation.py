@@ -58,6 +58,26 @@ def test_router_nhan_dien_du_an_va_giao_trong_so(db, indexed):
     assert "grand-view" in plan["explain"]
 
 
+def test_router_chuyen_sang_che_do_tim_theo_mo_ta_khi_khong_neu_ten_du_an(db, indexed):
+    """Câu hỏi mô tả cần trọng số khác hẳn — bằng chứng đo được ở Tuần 6.
+
+    Trọng số của chế độ targeted hạ graph xuống 0,3–0,4, đúng nhánh mạnh nhất khi câu hỏi
+    không có tên dự án để bám vào.
+    """
+    from app.services.query_router import DISCOVERY_WEIGHTS, MODE_DISCOVERY, MODE_TARGETED
+
+    mo_ta = route(db, indexed["tenant_id"], "Tìm căn hộ 2 phòng ngủ khoảng 70 m² ở Quận 7")
+    co_ten = route(db, indexed["tenant_id"], "Dự án Grand View có căn 2 phòng ngủ không?")
+
+    assert mo_ta["mode"] == MODE_DISCOVERY
+    assert mo_ta["weights"] == DISCOVERY_WEIGHTS
+    assert mo_ta["project_slug"] is None and mo_ta["allowed_projects"] == []
+    assert "không nêu tên dự án" in mo_ta["explain"]
+
+    assert co_ten["mode"] == MODE_TARGETED
+    assert co_ten["weights"]["graph"] < DISCOVERY_WEIGHTS["graph"]
+
+
 def test_router_khong_loc_khi_cau_hoi_nhac_hai_du_an(db, indexed):
     """Câu so sánh nhắc hai dự án → không khóa vào một dự án, nhưng vẫn giới hạn cả hai."""
     from app.models import GraphEntity

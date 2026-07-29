@@ -4,7 +4,7 @@ import json
 
 from sqlalchemy import select
 
-from app.models import DatasetSplit, RetrievalQuery
+from app.models import CleanListing, DatasetSplit, RetrievalQuery
 from app.services.dataset import (
     SPLIT_RATIOS,
     assign_split,
@@ -13,7 +13,7 @@ from app.services.dataset import (
     split_of_listing,
     split_report,
 )
-from app.services.gold_queries import generate_gold_queries
+from app.services.gold_queries import _hard_specs, generate_gold_queries
 from app.services.pipeline import run_clean_pipeline
 from app.services.sft_builder import build_sft_draft
 from tests.test_pipeline import databds, imported  # noqa: F401 — fixture dùng lại
@@ -85,6 +85,73 @@ def test_gold_query_sinh_tu_split_test(db, imported):  # noqa: F811
     # Chạy lại không nhân đôi
     generate_gold_queries(db, imported["tenant_id"], VERSION)
     assert len(db.scalars(select(RetrievalQuery)).all()) == len(queries)
+
+
+def _listing(**kwargs) -> CleanListing:
+    """Tin sạch tối thiểu để kiểm luật sinh câu hỏi (không cần ghi DB)."""
+    base = dict(
+        id=kwargs.pop("id"),
+        tenant_id="t",
+        source_row_id="s",
+        parser_version="v",
+        content_hash="h",
+        property_type="apartment",
+        title_clean="",
+        description_clean="",
+    )
+    return CleanListing(**{**base, **kwargs})
+
+
+def test_gold_query_kho_khong_neu_ten_du_an_va_gom_moi_dap_an_dung():
+    """Bộ hard phải: (1) không nhắc tên dự án, (2) nhãn gồm *mọi* tin khớp điều kiện."""
+    rows = [
+        _listing(id=f"id{i}", district="Quận 7", bedrooms=2, area_m2=area, project_slug=slug,
+                 project_name=name, total_price_vnd=price, ward="tan-phong")
+        for i, (area, slug, name, price) in enumerate(
+            [
+                (70.0, "grand-view", "Grand View", 4_000_000_000),
+                (72.0, "grand-view", "Grand View", 4_100_000_000),
+                (75.0, "vista-verde", "Vista Verde", 4_200_000_000),
+                (200.0, "xa-lac", "Xa Lắc", 9_000_000_000),  # lệch diện tích → ngoài nhãn
+            ]
+        )
+    ]
+
+    specs = _hard_specs(rows)
+    attribute = [s for s in specs if s["query_type"] == "hard_attribute"]
+
+    assert attribute, "phải sinh được câu hỏi theo thuộc tính"
+    spec = attribute[0]
+    assert spec["difficulty"] == "hard"
+    assert spec["project_slug"] is None
+    for name in ("Grand View", "Vista Verde", "Xa Lắc"):
+        assert name not in spec["question"]
+    # 3 tin trong ±15% quanh 70 m²; tin 200 m² bị loại
+    assert set(spec["expected_listing_ids"]) == {"id0", "id1", "id2"}
+    assert set(spec["expected_projects"]) == {"grand-view", "vista-verde"}
+
+
+def test_gold_query_kho_bo_nhom_qua_it_dap_an():
+    """Nhóm dưới 3 đáp án bị bỏ: precision@10 khi đó bị trần quá thấp để đọc được."""
+    rows = [
+        _listing(id="a", district="Quận 1", bedrooms=2, area_m2=50.0),
+        _listing(id="b", district="Quận 1", bedrooms=2, area_m2=51.0),
+    ]
+    assert [s for s in _hard_specs(rows) if s["query_type"] == "hard_attribute"] == []
+
+
+def test_gold_query_kho_ghi_nhan_tin_le_khong_thuoc_du_an():
+    """Tin lẻ vẫn là đáp án đúng — bỏ chúng ra là tự tạo đáp án mà hệ thống bị chấm sai."""
+    rows = [
+        _listing(id=f"n{i}", district="Quận 8", property_type="private_house",
+                 total_price_vnd=6_000_000_000 + i)
+        for i in range(3)
+    ]
+    budget = [s for s in _hard_specs(rows) if s["query_type"] == "hard_budget"]
+
+    assert len(budget) == 1
+    assert len(budget[0]["expected_listing_ids"]) == 3
+    assert budget[0]["expected_projects"] == []  # không tin nào thuộc dự án
 
 
 def test_sft_draft_khong_lay_du_lieu_test_va_de_trong_output(db, imported, tmp_path):  # noqa: F811

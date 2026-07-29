@@ -3,15 +3,16 @@
 > **File bắt đầu duy nhất cho phiên làm việc mới.** Khi mở lại dự án, hãy đọc file này trước. Chỉ mở các tài liệu hoặc mã nguồn được dẫn ở đây khi nhiệm vụ hiện tại thực sự cần chi tiết hơn.
 
 **Dự án:** AI tạo và tối ưu nội dung marketing BĐS đa kênh
-**Cập nhật gần nhất:** 29/07/2026 (chiều)
-**Trạng thái tổng thể:** Tuần 1–5 đã merge vào `main` (merge gần nhất `ebc6ce7`); **131/131 tests pass**.
+**Cập nhật gần nhất:** 29/07/2026 (tối)
+**Trạng thái tổng thể:** Tuần 1–6 đã xong; **152/152 tests pass**.
 
 | Tuần | Kết quả đã có bằng chứng |
 |---|---|
 | 1–2 | Monorepo FastAPI+Next.js, auth/RBAC/tenant, pipeline D1–D5 idempotent, 4.794 tin sạch + 31.167 facts + graph ≤2 hop |
 | 3 | Knowledge base 9.656 chunk embed **bge-m3 trên GPU**, FTS tiếng Việt + pgvector HNSW, entity resolution 617 dự án, `dataset_v1` đóng băng (leakage audit **đạt**), 72 gold query |
-| 4 | **BM25 tiếng Việt tự cài**: nhánh lexical 0,090 → **0,964** precision@10; **R3-router 1,000 · recall 0,938 · MRR 1,000**; Content Studio + Evidence panel; baseline A/B: RAG giảm claim vô căn cứ **0,2042 → 0,0917 (−55%)**, thắng 4/4 brief (n = 4, chưa kiểm định thống kê) |
+| 4 | **BM25 tiếng Việt tự cài**: nhánh lexical 0,090 → **0,964** precision@10; **R3-router 1,000 · recall 0,938 · MRR 1,000**; Content Studio + Evidence panel; baseline A/B ~~RAG giảm claim vô căn cứ 55%~~ — **kết luận này đã bị Tuần 6 bác bỏ, xem mục 5e** |
 | 5 | Ma trận **A–D đủ bốn ô** (C/D chỉ chờ adapter cắm vào — mục 5-0), **vòng duyệt nội dung** `/review` đầy đủ, gói training bàn giao Hải (`training/`), SFT export 237 mẫu đã lọc bằng claim checker |
+| 6 | **36 câu hỏi khó không nêu tên dự án** → precision 1,000 của Tuần 4 phần lớn là công của khớp tên (bộ khó chỉ 0,273); **router có chế độ "tìm theo mô tả"** đưa bộ khó lên 0,339 mà không tụt bộ standard; **thí nghiệm đóng băng có snapshot + kiểm định thống kê**, dashboard `/experiments`; **n = 12 cho thấy RAG chưa có ưu thế đo được (mục 5e)** |
 
 **Ba việc chặn tiến độ, đều cần quyết định ngoài code:** (1) Hải train adapter QLoRA đầu tiên, (2) staging URL chờ Anh cấp tài khoản cloud, (3) mô tả nguồn bị crawler cắt cụt (mục 5c).
 
@@ -79,18 +80,18 @@ máy có DB (Quang)                         máy GPU (Hải / Colab)
   transformers không báo lỗi mà sinh văn rác — đã chặn bằng code.
 - Chưa có adapter mà chạy C/D thì API trả 400 kèm hướng dẫn, Studio hiện cảnh báo ngay.
 
-## 5a. Kết quả baseline A/B (chạy xong 29/07)
+## 5a. Kết quả baseline A/B — ⚠️ **đã bị bác bỏ ở Tuần 6, đọc mục 5e trước khi trích**
 
 4 brief lấy từ dự án thuộc split test × 2 cấu hình, `Qwen2.5-1.5B-Instruct` fp16 trên GPU máy, greedy + seed 42, retrieval R3 với k = 3:
 
 | Chỉ số | A (prompt-only) | B (RAG) |
 |---|---:|---:|
-| Tỷ lệ claim không có căn cứ | 0,2042 | **0,0917** (−55%) |
-| Bài có ít nhất 1 claim vô căn cứ | 4/4 | **2/4** |
+| Tỷ lệ claim không có căn cứ | 0,2042 | 0,0917 (−55%) |
+| Bài có ít nhất 1 claim vô căn cứ | 4/4 | 2/4 |
 | Số claim trung bình mỗi bài | 5,00 | 5,25 |
 | Thời gian sinh trung bình | 72,6 giây | 100,6 giây |
 
-**B tốt hơn A ở cả 4/4 brief, không ca nào RAG làm xấu đi.** Số claim không giảm → B không né nói số để ăn điểm, mà nói số đúng hơn. **Cảnh báo bắt buộc khi trích dẫn: n = 4, chưa kiểm định thống kê được** — đây là baseline xác nhận hướng, không phải kết luận. Cỡ mẫu thật (40–60 brief + human eval mù) chạy khi có GPU thuê.
+Bốn brief này **tái lập chính xác** ở run Tuần 6 (từng con số trùng khít), nhưng chạy tiếp 8 brief nữa thì ưu thế biến mất — xem mục 5e. **Không trích bảng này như kết luận.**
 
 Bảng chi tiết: `docs/checkpoints/week_04_ab_baseline.md`; phân tích: `week_04_report.md` §2.3.
 
@@ -100,17 +101,44 @@ Bảng chi tiết: `docs/checkpoints/week_04_ab_baseline.md`; phân tích: `week
 
 **Chưa làm, cố ý bỏ qua:** chạy lại toàn bộ pipeline theo `reparse_v2`. Ảnh chụp DB hiện tại vẫn là bản **trước** `reparse_v2`, tức 31 tin phòng ngủ phi lý vẫn còn trong dữ liệu đang chạy; luật chặn đã có trong code, chỉ chờ lần rebuild kế tiếp (khoảng 15 phút GPU). **Phải ghi rõ điều này nếu trích số liệu từ DB hiện tại.**
 
-## 5. Việc cần làm tiếp theo (đầu Tuần 6)
+## 5e. ⚠️ Tuần 6 bác bỏ kết luận A/B của Tuần 4 — chỗ này quan trọng nhất
 
-1. **Hải train adapter đầu tiên rồi bàn giao** — theo `training/README.md`, chạy `--smoke` kiểm môi trường trước. Đây là thứ duy nhất còn thiếu để cấu hình C/D có số thật.
+Run `week6_frozen_ab`: **12 brief** × A/B, cùng model, cùng seed, cùng prompt (`docs/checkpoints/week_06_experiment.md`).
+
+| Chỉ số | A | B |
+|---|---:|---:|
+| Tỷ lệ claim không có căn cứ | **0,1604** | 0,1747 |
+| Bài có ≥1 claim vô căn cứ | 9/12 | **7/12** |
+| Số claim mỗi bài | 5,58 | 6,08 |
+| Đúng định dạng 3 phần | **0,583** | 0,333 |
+
+Chênh lệch **+0,0142 (B xấu hơn)**, KTC 95% **[−0,111; +0,138]** chứa 0, thắng/thua **6/5**, dz 0,06, **p = 0,85**. Tức là **ở n = 12, RAG không có ưu thế đo được**.
+
+**Vì sao Tuần 4 ra kết quả ngược:** `pick_briefs` xếp dự án theo số tin giảm dần, nên "4 brief đầu" chính là **4 dự án nhiều tin nhất** — nhóm mà truy xuất có nhiều dữ kiện nhất. Lấy 4 phần tử đầu của danh sách đã sắp xếp không phải lấy mẫu, mà là chọn ca thuận lợi. Cảnh báo "n = 4" hồi đó đúng nhưng chưa đủ: vấn đề nằm ở **cách chọn mẫu**, không chỉ ở cỡ mẫu.
+
+**Giả thuyết (chưa kiểm chứng):** model 1,5B không dùng nổi khối context ~2.000 token — nhiều số trước mắt thì viết nhiều câu có số hơn (6,08 so với 5,58) và chép sai nhiều hơn; bằng chứng gián tiếp là B tuân định dạng kém hẳn (0,333 so với 0,583). Ba cách kiểm chứng, rẻ đến đắt, ở `week_06_report.md` §3.2 — ưu tiên **chạy lại đúng 12 brief này trên model 7–8B**.
+
+**Không đổi phạm vi đồ án:** đây chính là thứ thí nghiệm sinh ra để trả lời, và Plan/03 §7 đã khóa trước nguyên tắc báo cáo cả kết quả âm. Nhưng mọi số trích từ Tuần 4 phải kèm ghi chú này.
+
+## 5d. Tuần 6 — hai phát hiện phải nhớ khi viết báo cáo
+
+**1. Số đẹp của Tuần 4 đo nhầm thứ.** Cả 72 gold query đều nêu tên dự án nên router khớp tên rồi lọc thẳng — precision 1,000 đo *khả năng khớp tên*, không đo khả năng tìm kiếm. Thêm 36 câu hỏi mô tả (thuộc tính / ngân sách / địa bàn, **không nêu tên**) thì cùng hệ thống rơi xuống **0,273**. BM25 sụp mạnh nhất (0,964 → 0,115) vì không còn tên riêng để bám. **Trích số phải trích cả hai cột**, nếu không là để người đọc hiểu sai.
+
+**2. Nhánh graph mạnh nhất đúng ở chỗ trước giờ chưa đo.** Bộ standard: graph yếu nhất (0,738). Bộ khó: graph **mạnh nhất (0,465)**, riêng câu hỏi theo địa bàn đạt 0,855 — nó khớp thực thể phường/quận rồi đi theo cạnh, thay vì so chuỗi ký tự. Nhưng R3 lúc đầu không hưởng được vì trọng số cố định hạ graph xuống 0,3. Đã sửa: router chia hai chế độ, **không nhận ra dự án nào ⇒ dùng trọng số riêng** (`vector 1,0 · bm25 0,3 · graph 0,9`, chốt bằng sweep) → bộ khó 0,273 → **0,339**, bộ standard giữ nguyên **1,000**. Sweep cũng cho thấy nếu áp trọng số đó cho *mọi* câu thì standard tụt 0,986 → 0,738 — đó là lý do phải có router chứ không phải một bộ trọng số duy nhất.
+
+**Một lỗi đo lường đã mắc và đã sửa:** precision chuẩn hóa ra **2,16** ("đúng 216%") vì chia cho trần tính theo *tin* trong khi đếm theo *chunk* — mỗi tin có 3 chunk nên một tin đúng chiếm được 3 ô trong top-k. Sửa bằng cách đưa tử và mẫu về cùng cấp tin phân biệt. Bài học: chỉ số vượt 1,0 là dấu hiệu tử và mẫu khác đơn vị.
+
+## 5. Việc cần làm tiếp theo (đầu Tuần 7)
+
+1. **Hải train adapter đầu tiên rồi bàn giao** — theo `training/README.md`, chạy `--smoke` kiểm môi trường trước. Đây là thứ duy nhất còn thiếu để cấu hình C/D có số thật. Khi có adapter: `python -m app.experiment_cli --briefs 12 --configs A,B,C,D` là điền đủ ma trận, không sửa code.
 2. **Chọn nền tảng cloud + cấp tài khoản** → deploy staging (carry-over từ Tuần 1, vẫn chưa xong).
 3. **Quyết định về mô tả bị cắt cụt** (mục 5c) — crawl lại hay hạ kỳ vọng độ dài; phải chốt trước khi train thật.
-4. Hải: soát tay 72 gold query **và viết thêm bộ câu hỏi khó không nêu tên dự án** — bộ hiện tại đều nêu tên nên R3 đạt precision 1,000, chưa phản ánh ca thật (giải thích ở `week_04_report.md` §1.4).
-5. Chạy frozen A–D + R1–R3, dựng dashboard so sánh (gate Tuần 6).
-6. Chốt danh sách human rater (Plan/03 §5) — đã trễ so với dự kiến Tuần 3.
+4. Hải: soát tay **108 gold query**, soát bộ hard riêng (`/dataset` có bộ lọc "Không nêu tên dự án"). Nhãn tự sinh chưa phải nhãn cuối.
+5. **Vision + critic (Tuần 7 theo Plan/01 §6)** — VLM trích visual fact có confidence + UI xác nhận; ablation D+V.
+6. Chốt danh sách human rater (Plan/03 §5) — đã trễ so với dự kiến Tuần 3; đây là nửa bằng chứng còn thiếu bên cạnh chỉ số tự động.
 7. Tích lũy nội dung đã duyệt trong `/review` để có mẫu SFT cho 3 kênh còn lại.
 
-Chi tiết + cách chạy local: `docs/checkpoints/week_01_report.md` → `week_05_report.md`.
+Chi tiết + cách chạy local: `docs/checkpoints/week_01_report.md` → `week_06_report.md`.
 
 ## 5c. Mô tả trong DataBDS bị crawler cắt cụt — cần Hải quyết
 
@@ -174,6 +202,10 @@ Nếu trễ, cắt theo thứ tự: DPO → ablation D+V+R → video/đa ngôn n
 | 29/07/2026 | Gói training bàn giao Hải | `training/` — `qlora_train.py`, README hợp đồng, requirements, notebook Colab | Độc lập hoàn toàn với backend; có `--smoke` kiểm môi trường GPU trước |
 | 29/07/2026 | Dataset SFT sẵn sàng train | `python -m app.sft_cli` trên `dataset_v1` | **237 mẫu** (191 train · 46 val · 130 dự án) sau khi lọc bằng claim checker; loại 2.155 tin vì chứa số không có trong facts |
 | 29/07/2026 | Phát hiện mô tả nguồn bị cắt cụt | Đo 4.795 tin raw: trung vị 166 ký tự, chỉ 4,8% đạt ≥300 | Mẫu SFT ngắn hơn yêu cầu kênh → cần Hải quyết (mục 5c) |
+| 29/07/2026 | **Tuần 6 — frozen A/B n = 12** | Run `week6_frozen_ab` trong bảng `experiment_runs`; `docs/checkpoints/week_06_experiment.md` | **Bác bỏ kết luận Tuần 4**: chênh lệch +0,0142 (B xấu hơn), KTC 95% chứa 0, p = 0,85, thắng/thua 6/5 |
+| 29/07/2026 | **Tuần 6 — bộ câu hỏi khó** | 36 câu mô tả không nêu tên dự án; `docs/checkpoints/week_06_retrieval_eval.md` (108 query) | R3-router: standard **1,000** nhưng hard chỉ **0,273** — chênh lệch là công của khớp tên |
+| 29/07/2026 | Router chế độ "tìm theo mô tả" | Sweep 6 cấu hình trọng số trên bộ hard, chốt `vector 1,0 · bm25 0,3 · graph 0,9` | Hard 0,273 → **0,339**; standard giữ **1,000**; nhánh graph là nhánh mạnh nhất ở bộ hard (0,465) |
+| 29/07/2026 | Dashboard so sánh + hạ tầng snapshot | Bảng `experiment_runs` (migration `377b71234a7d`); `/experiments`; 152/152 tests | Kiểm trên trình duyệt: snapshot, bảng chỉ số, so sánh cặp có KTC/p, 24 bài chi tiết, cảnh báo "chưa có adapter" cho C/D |
 | 28/07/2026 | Đánh giá retrieval R1/R2 | `docs/checkpoints/week_03_retrieval_eval.md` | R1-vector precision@10 **0,850** · MRR 0,921; R2-graph recall **0,862**; R1-fts chỉ 0,087 và RRF không trọng số kém hơn vector → cần BM25 + RRF có trọng số ở Tuần 4 |
 
 ## 9. Blocker và câu hỏi mở
@@ -184,11 +216,12 @@ Nếu trễ, cắt theo thứ tự: DPO → ablation D+V+R → video/đa ngôn n
 | Cao | **Chưa có staging URL** (carry-over từ Tuần 1) | Quang | Cần Anh chọn nền tảng cloud + cấp tài khoản; deploy ngay sau đó |
 | Cao | **Mô tả nguồn bị crawler cắt cụt** (trung vị 166 ký tự) | Hải + Anh | Crawl lại trường mô tả, hoặc hạ kỳ vọng độ dài và ghi rõ trong báo cáo — mục 5c |
 | Trung bình | Mẫu SFT mới có 237, dưới mục tiêu 800–1.500 | Hải | Nới ngưỡng lọc có kiểm soát + tích lũy nội dung đã duyệt trong `/review` |
-| Trung bình | Gold query đều nêu tên dự án → precision 1,000 chưa phản ánh ca khó | Hải | Viết thêm bộ câu hỏi không nêu tên dự án |
-| Trung bình | Baseline A/B mới có **n = 4 brief** — chưa đủ kiểm định thống kê | Hải + Quang | Frozen test 40–60 brief + human eval mù, chạy trên GPU thuê (Tuần 5–6) |
+| ~~Trung bình~~ | ~~Gold query đều nêu tên dự án → precision 1,000 chưa phản ánh ca khó~~ — **đã xử lý ở Tuần 6** | Quang | 36 câu hỏi mô tả không nêu tên; số thật của bộ khó là 0,339 (mục 5d) |
+| **Cao** | **Ưu thế của RAG chưa chứng minh được** — n = 12 cho p = 0,85, KTC chứa 0 (mục 5e) | Hải + Quang | Chạy lại 12 brief trên model 7–8B; nếu vẫn không đảo chiều thì phải xem lại giả thuyết chính chứ không chỉ tăng cỡ mẫu |
+| Trung bình | Bộ brief xếp theo số tin nên cắt n nhỏ là chọn ca thuận lợi | Quang | Lấy mẫu phân tầng theo quy mô dự án, hoặc chạy đủ 40–60 brief |
 | Trung bình | Ảnh chụp DB đang chạy vẫn là bản **trước `reparse_v2`** | Quang | Chạy `pipeline_cli --rebuild` → `index_cli` → `dataset_cli --build --eval` (~15 phút GPU) trước khi lấy số liệu cuối |
 | ~~Trung bình~~ | ~~R1-fts yếu (precision 0,086) kéo RRF xuống dưới vector~~ — **đã xử lý ở Tuần 4** | Quang | BM25 tự cài + RRF có trọng số → 0,964 / 0,981 |
-| Trung bình | 72 gold query chưa soát tay | Hải | Soát và bỏ cờ `needs_review` trước khi khóa benchmark |
+| Trung bình | **108** gold query chưa soát tay (72 standard + 36 hard) | Hải | Soát và bỏ cờ `needs_review` trước khi khóa benchmark; `/dataset` có bộ lọc theo độ khó |
 | Trung bình | Chưa chốt danh sách human rater | Cả nhóm | Chốt từ Tuần 3 theo `Plan/03` §5 |
 
 ---
@@ -199,16 +232,19 @@ Nếu trễ, cắt theo thứ tự: DPO → ablation D+V+R → video/đa ngôn n
 
 - 29/07/2026: xong Tuần 1–5 (Tuần 5 trừ phần cần GPU), tất cả đã ở `main`.
 - Code hiện có: `backend/` (FastAPI + SQLAlchemy + Alembic; auth/RBAC/tenant, ingestion raw, pipeline D1–D5, facts + graph ≤2 hop, chunking/FTS/embedding, **BM25 tự cài**, retrieval R1–R3 + query router, dataset split + gold query + SFT builder + **SFT export sẵn sàng train**, model gateway + prompt có version + claim check + logging generations, **adapter registry + cấu hình C/D**, **vòng duyệt nội dung**) · `frontend/` (Next.js 15: login, `/projects`, `/data`, `/graph`, `/search`, `/studio`, `/review`, `/dataset`) · `training/` (gói QLoRA độc lập cho máy GPU).
-- Dữ liệu trên PostgreSQL local (`docker compose up -d`): 4.795 tin raw · 4.794 tin sạch · 31.167 facts · graph 1.941 node / 2.653 cạnh · 9.656 chunk đã embed bằng `BAAI/bge-m3` · `dataset_v1` đã đóng băng · 72 gold query · 1.500 mẫu SFT nháp · 26 bản ghi `generations` (gồm baseline A/B thật) · **0 nội dung trong vòng duyệt** (dữ liệu thử E2E đã xóa sạch sau khi kiểm).
+- Dữ liệu trên PostgreSQL local (`docker compose up -d`): 4.795 tin raw · 4.794 tin sạch · 31.167 facts · graph 1.941 node / 2.653 cạnh · 9.656 chunk đã embed bằng `BAAI/bge-m3` · `dataset_v1` đã đóng băng · **108 gold query** (72 standard + 36 hard) · 1.500 mẫu SFT nháp · 50 bản ghi `generations` · **1 lượt `experiment_runs`** (`week6_frozen_ab`, 12 brief × A/B) · **0 nội dung trong vòng duyệt** (dữ liệu thử E2E đã xóa sạch sau khi kiểm).
 - Thư mục `backend/models/adapters/` đang **trống** (chỉ có README) — đó là lý do cấu hình C/D chưa có số. Trọng số adapter cố ý không đưa vào git.
+- Từ Tuần 6, mọi số thí nghiệm phải chạy qua `experiment_cli` chứ không phải `ab_cli`: nó ghi lại **snapshot** (commit git, model, prompt version, trọng số router, adapter fingerprint, kích thước split) vào bảng `experiment_runs`. Không có snapshot thì bảng số trong báo cáo không chứng minh được là chạy cùng điều kiện. `ab_cli` giữ lại để tái lập đúng số Tuần 4.
 - Lệnh hay dùng (chạy trong `backend/`):
   - `python -m app.pipeline_cli --rebuild --report ..\docs\checkpoints\week_02_data_quality.md` — chạy lại D1–D5 khi đổi luật parser
   - `python -m app.index_cli` — chunk + FTS + embed bge-m3 trên GPU (~9 phút cho 9.656 chunk)
   - `python -m app.dataset_cli --build --eval --sweep` — split + gold query + SFT + data card + bảng R1–R3 + sweep trọng số
-  - `python -m app.ab_cli --briefs 4 --k 3 --max-new-tokens 200` — chạy baseline A/B trên GPU (mỗi bài 3–6 phút)
+  - `python -m app.experiment_cli --briefs 12 --configs A,B,C,D --model Qwen/Qwen2.5-1.5B-Instruct --fp16 --k 3 --max-new-tokens 200` — **thí nghiệm đóng băng có snapshot**; thiếu adapter thì C/D bị bỏ qua kèm lý do, A/B vẫn ra số
+  - `python -m app.experiment_cli --list` — liệt kê các lượt đã chạy; xem chi tiết ở `/experiments`
+  - `python -m app.ab_cli --briefs 4 --k 3 --max-new-tokens 200` — bản Tuần 4, giữ để tái lập số cũ
   - `python -m app.sft_cli --out artifacts\sft` — xuất `train.jsonl`/`validation.jsonl` + thẻ dataset để mang sang máy GPU
   - Máy không GPU: thêm `--backend hashing` (index) và `--provider template` (sinh nội dung) — chỉ để pipeline chạy, **không dùng cho số liệu báo cáo**. Test tự động luôn chạy ở chế độ này (`tests/conftest.py`).
 - Phụ thuộc nặng (torch/transformers/bitsandbytes/sentence-transformers) nằm ở `backend/requirements-ml.txt`, tách khỏi `requirements.txt` để CI không phải tải model.
 - Môi trường: backend cổng **8001** (cổng 8000 bị `latcat.exe` chiếm), frontend 3000, tài khoản demo `admin@cancu.demo` / `cancu123`. GPU: GTX 1650 Ti 4GB, torch 2.6.0+cu124, CUDA hoạt động.
-- Việc đầu tiên phiên tới: Tuần 6 theo `Plan/01` §6 — chạy frozen A–D + R1–R3 và dựng dashboard so sánh. **Cần adapter của Hải trước** (mục 5-0) thì C/D mới có số; nếu chưa có thì làm trước phần dashboard + hard set gold query. Xem mục 5.
+- Việc đầu tiên phiên tới: Tuần 7 theo `Plan/01` §6 — vision (VLM trích visual fact có confidence + UI xác nhận) + critic panel + ablation D+V. Phần này **không phụ thuộc adapter** nên làm được ngay. Ma trận A–D vẫn khuyết C/D cho tới khi Hải bàn giao adapter (mục 5-0); lúc đó chỉ cần chạy lại `experiment_cli` là điền đủ.
 - Nhớ bật `docker compose up -d` trước mọi lệnh CLI — batch tối 28/07 chết vì Docker tắt trước tiến trình Python.

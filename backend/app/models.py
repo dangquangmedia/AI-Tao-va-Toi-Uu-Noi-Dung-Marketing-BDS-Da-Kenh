@@ -357,8 +357,14 @@ class RetrievalQuery(Base):
     query_type: Mapped[str] = mapped_column(String(20), index=True)
     question: Mapped[str] = mapped_column(Text)
     split: Mapped[str] = mapped_column(String(12), default="test")
+    # standard = câu hỏi nêu đúng tên dự án (bộ Tuần 3) · hard = câu hỏi mô tả theo thuộc
+    # tính, không nêu tên. Tách ra vì trộn chung thì số của bộ dễ che mất bộ khó.
+    difficulty: Mapped[str] = mapped_column(String(10), default="standard", server_default="standard", index=True)
     project_slug: Mapped[str | None] = mapped_column(String(120), nullable=True)
     expected_listing_ids: Mapped[list] = mapped_column(JSON, default=list)
+    # Danh sách slug dự án được coi là đúng. Câu hỏi mô tả thường có nhiều đáp án đúng,
+    # nên nhãn phải ghi thẳng ở đây thay vì suy từ `expected_entities`.
+    expected_projects: Mapped[list] = mapped_column(JSON, default=list)
     expected_entities: Mapped[list] = mapped_column(JSON, default=list)
     generator: Mapped[str] = mapped_column(String(30), default="")  # template sinh ra query
     needs_review: Mapped[bool] = mapped_column(default=True)  # chờ Hải soát tay
@@ -385,6 +391,36 @@ class LexicalPosting(Base):
     tf: Mapped[int] = mapped_column(Integer, default=1)
 
 
+class ExperimentRun(Base):
+    """Một lượt chạy thí nghiệm đóng băng trên frozen test set (Tuần 6, Plan/03 §7).
+
+    Lý do tồn tại: bảng kết quả trong báo cáo phải nói được **chạy trên phiên bản nào**.
+    `snapshot` ghi lại toàn bộ trạng thái lúc chạy — commit git, parser version, model
+    embedding + số chunk, prompt version + hash, trọng số retrieval, model sinh + adapter
+    fingerprint, kích thước split. Đổi bất kỳ thứ nào trong đó là một run khác.
+    """
+
+    __tablename__ = "experiment_runs"
+    __table_args__ = (UniqueConstraint("tenant_id", "run_key", name="uq_experiment_run_key"),)
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
+    tenant_id: Mapped[str] = mapped_column(String(32), ForeignKey("tenants.id"), index=True)
+    created_by: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"))
+
+    run_key: Mapped[str] = mapped_column(String(64))  # người đặt hoặc sinh từ thời điểm
+    label: Mapped[str] = mapped_column(String(160), default="")
+    dataset_version: Mapped[str] = mapped_column(String(30), index=True)
+    configs: Mapped[list] = mapped_column(JSON, default=list)  # cấu hình đã chạy: A/B/C/D
+    skipped: Mapped[dict] = mapped_column(JSON, default=dict)  # cấu hình bỏ qua + lý do
+    snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
+    summary: Mapped[dict] = mapped_column(JSON, default=dict)  # chỉ số theo cấu hình + so sánh cặp
+    n_briefs: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(20), default="running")  # running | done | failed
+    error: Mapped[str] = mapped_column(Text, default="")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class Generation(Base):
     """Một lần sinh nội dung — log đủ để tái lập và để so sánh A–D (Plan/03 §7).
 
@@ -399,6 +435,11 @@ class Generation(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
     tenant_id: Mapped[str] = mapped_column(String(32), ForeignKey("tenants.id"), index=True)
     created_by: Mapped[str] = mapped_column(String(32), ForeignKey("users.id"))
+    # Gắn với một lượt chạy thí nghiệm đóng băng (Tuần 6). Rỗng = sinh lẻ từ Studio;
+    # số trong báo cáo chỉ lấy từ các dòng có run, vì chỉ run mới có snapshot version.
+    experiment_run_id: Mapped[str | None] = mapped_column(
+        String(32), ForeignKey("experiment_runs.id"), nullable=True, index=True
+    )
 
     config: Mapped[str] = mapped_column(String(4), index=True)  # A | B | C | D
     retrieval_config: Mapped[str] = mapped_column(String(10), default="none")  # none|R1|R2|R3
